@@ -34,7 +34,7 @@ async def main():
         await pg.goto((ROOT / 'index.html').as_uri()); await pg.wait_for_timeout(1500)
         await pg.evaluate("""()=>{ S.dl={save:async ({filename,data})=>{ window.__pdf=data; return {status:'saved'} }}; }""")
         await pg.click('button[data-tab="schem"]'); await pg.wait_for_timeout(300)
-        for k in ['44', '55', '66']: await pg.click(f'[data-grade="{k}"]'); await pg.wait_for_timeout(150)
+        for k in ['w80', 'w85', 'w90']: await pg.click(f'[data-grade="{k}"]'); await pg.wait_for_timeout(150)
         await pg.click('button[data-tab="text"]'); await pg.wait_for_timeout(300)
         await pg.check('#tgrade'); await pg.wait_for_timeout(200)
         await run(pg, True, '/tmp/vec.pdf')

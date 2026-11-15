@@ -15,6 +15,7 @@ async def main():
         # 핏 프리셋
         await pg.click('[data-fit="over"]'); await pg.wait_for_timeout(400)
         print('오버핏 가슴 여유', await ev("S.P.ease.chest"), '완성', await ev("fmt(S.C.finished.chest)"))
+        await pg.click('[data-sgroup="m"]'); await pg.wait_for_timeout(200)
         await pg.click('[data-preset="m100"]'); await pg.wait_for_timeout(400)
         print('남성100 가슴', await ev("S.P.body.chest"), '인스펙터', (await pg.inner_text('.insp'))[:60].replace('\n', ' '))
         # 차트 트래커

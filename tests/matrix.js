@@ -1,18 +1,7 @@
 // 범용성 검증: 사이즈 x 핏 x 형태 x 게이지 x 무늬 조합을 모두 계산해 이상값을 찾는다
 const E = require('../src/engine.js');
-const PRESETS = {
-  '44': { chest: 82, hip: 88, shoulder: 36, armDepth: 16.5, neckW: 14.5, armLen: 54, upperArm: 25.5, wrist: 15, length: 56 },
-  '55': { chest: 86, hip: 92, shoulder: 38, armDepth: 17, neckW: 15, armLen: 55, upperArm: 27, wrist: 15.5, length: 58 },
-  '66': { chest: 90, hip: 96, shoulder: 39, armDepth: 17.5, neckW: 15.5, armLen: 56, upperArm: 28.5, wrist: 16, length: 60 },
-  '77': { chest: 95, hip: 100, shoulder: 40, armDepth: 18, neckW: 16, armLen: 57, upperArm: 30, wrist: 16.5, length: 61 },
-  '88': { chest: 100, hip: 104, shoulder: 41, armDepth: 18.5, neckW: 16.5, armLen: 57.5, upperArm: 32, wrist: 17, length: 62 },
-  'm95': { chest: 95, hip: 95, shoulder: 44, armDepth: 19, neckW: 16.5, armLen: 59, upperArm: 30, wrist: 17, length: 66 },
-  'm100': { chest: 100, hip: 99, shoulder: 45.5, armDepth: 19.5, neckW: 17, armLen: 60, upperArm: 31.5, wrist: 17.5, length: 68 },
-  'm105': { chest: 105, hip: 103, shoulder: 47, armDepth: 20, neckW: 17.5, armLen: 61, upperArm: 33, wrist: 18, length: 70 },
-  'm110': { chest: 110, hip: 107, shoulder: 48.5, armDepth: 20.5, neckW: 18, armLen: 62, upperArm: 34.5, wrist: 18.5, length: 72 },
-  'k110': { chest: 58, hip: 60, shoulder: 27, armDepth: 12.5, neckW: 11.5, armLen: 36, upperArm: 18, wrist: 12, length: 38 },
-  'k130': { chest: 66, hip: 68, shoulder: 31, armDepth: 14, neckW: 12.5, armLen: 43, upperArm: 20.5, wrist: 13, length: 45 },
-};
+const SZ = require('../src/sizes.js');
+const PRESETS = SZ.PRESETS;
 const FITS = {
   slim: { chest: 4, hip: 2, shoulder: 0, armDepth: 1.5, neckW: 1, armLen: 0, upperArm: 2, wrist: 2 },
   standard: { chest: 8, hip: 6, shoulder: 0, armDepth: 3, neckW: 2, armLen: 0, upperArm: 4, wrist: 4 },
@@ -30,12 +19,13 @@ for (const g of ['pullover', 'cardigan']) for (const n of ['round', 'v']) for (c
 const issues = {}; const add = (k, ex) => { (issues[k] = issues[k] || { n: 0, ex: [] }).n++; if (issues[k].ex.length < 4) issues[k].ex.push(ex); };
 const warnCount = {}; let total = 0;
 const live = (pc, r) => (pc.rows[r] || []).reduce((a, s) => a + s.r - s.l + 1, 0);
-for (const k in PRESETS) for (const f in FITS) for (const [st, row] of GAUGES) for (const pat of PATS) for (const [g, n, s, sh] of SHAPES) {
+for (const k of (process.env.ONLY ? Object.keys(PRESETS).filter(x => x[0] === process.env.ONLY) : Object.keys(PRESETS))) for (const f in FITS) for (const [st, row] of GAUGES) for (const pat of PATS) for (const [g, n, s, sh] of SHAPES) {
+  if ((k[0] === 'b' || k === 'k3') && st < 18) continue; // 유아복, 3호에 굵은 실(10cm 14코)은 보지 않음
   const p = PRESETS[k];
   const P = { name: 't', garment: g, neck: n, sleeve: s, body: { ...p }, ease: { ...FITS[f] },
-    design: { length: p.length, ribH: k.startsWith('k') ? 4 : 6, cuffH: k.startsWith('k') ? 4 : 6, neckbandH: 2.5, bandW: 3, frontNeckD: k.startsWith('k') ? 5.5 : 7, backNeckD: 2, vDepth: k.startsWith('k') ? 13 : 20, shoulderDrop: 2, capTop: 8, buttons: 6, shoulderMethod: sh },
+    design: { length: p.length, ...SZ.groupOf(k).dz, bandW: 3, buttons: 6, shoulderMethod: sh },
     gauge: { unit: '10cm', st, row, dens: 1.2, swatchW: 6, needle: 4, ribNeedle: 3.5, yarn: '', ballW: 50, ballLen: 120 }, pattern: pat };
-  delete P.body.length;
+  delete P.body.length; delete P.body.height;
   const id = `${k}/${f}/${st}x${row}/${pat.rib}${pat.center ? '+c' : ''}/${g}/${n}/${s}/${sh}`;
   total++;
   let C;

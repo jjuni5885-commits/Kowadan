@@ -5,7 +5,7 @@
   "scripts": {
     "build": "python3 build.py",
     "test": "node tests/engine_test.js && node tests/engine_variants.js",
-    "verify": "node tests/engine_snapshot.js && node tests/matrix.js > /dev/null && node tests/fuzz.js 3000 > /dev/null && echo 검증 통과"
+    "verify": "node tests/engine_snapshot.js && node tests/matrix.js > /dev/null && node tests/fuzz.js 3000 > /dev/null && node tests/matrix_td.js 1500 > /dev/null && echo 검증 통과"
   },
   "devDependencies": {
     "jspdf": "2.5.1"

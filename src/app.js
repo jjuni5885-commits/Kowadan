@@ -1,20 +1,5 @@
 'use strict';
 /* ===================== 앱 상태 ===================== */
-const PRESETS = {
-  '44': { chest: 82, hip: 88, shoulder: 36, armDepth: 16.5, neckW: 14.5, armLen: 54, upperArm: 25.5, wrist: 15, length: 56 },
-  '55': { chest: 86, hip: 92, shoulder: 38, armDepth: 17, neckW: 15, armLen: 55, upperArm: 27, wrist: 15.5, length: 58 },
-  '66': { chest: 90, hip: 96, shoulder: 39, armDepth: 17.5, neckW: 15.5, armLen: 56, upperArm: 28.5, wrist: 16, length: 60 },
-  '77': { chest: 95, hip: 100, shoulder: 40, armDepth: 18, neckW: 16, armLen: 57, upperArm: 30, wrist: 16.5, length: 61 },
-  '88': { chest: 100, hip: 104, shoulder: 41, armDepth: 18.5, neckW: 16.5, armLen: 57.5, upperArm: 32, wrist: 17, length: 62 },
-  'm95': { chest: 95, hip: 95, shoulder: 44, armDepth: 19, neckW: 16.5, armLen: 59, upperArm: 30, wrist: 17, length: 66 },
-  'm100': { chest: 100, hip: 99, shoulder: 45.5, armDepth: 19.5, neckW: 17, armLen: 60, upperArm: 31.5, wrist: 17.5, length: 68 },
-  'm105': { chest: 105, hip: 103, shoulder: 47, armDepth: 20, neckW: 17.5, armLen: 61, upperArm: 33, wrist: 18, length: 70 },
-  'm110': { chest: 110, hip: 107, shoulder: 48.5, armDepth: 20.5, neckW: 18, armLen: 62, upperArm: 34.5, wrist: 18.5, length: 72 },
-  'k110': { chest: 58, hip: 60, shoulder: 27, armDepth: 12.5, neckW: 11.5, armLen: 36, upperArm: 18, wrist: 12, length: 38 },
-  'k130': { chest: 66, hip: 68, shoulder: 31, armDepth: 14, neckW: 12.5, armLen: 43, upperArm: 20.5, wrist: 13, length: 45 },
-};
-const PRESET_GROUPS = [['여성', ['44', '55', '66', '77', '88']], ['남성', ['m95', 'm100', 'm105', 'm110']], ['아동', ['k110', 'k130']]];
-const presetLabel = k => k.replace(/^[mk]/, '');
 const FITS = {
   slim: { name: '슬림핏', d: '+4cm', ease: { chest: 4, hip: 2, shoulder: 0, armDepth: 1.5, neckW: 1, armLen: 0, upperArm: 2, wrist: 2 } },
   standard: { name: '스탠다드핏', d: '+8cm', ease: { chest: 8, hip: 6, shoulder: 0, armDepth: 3, neckW: 2, armLen: 0, upperArm: 4, wrist: 4 } },
@@ -23,10 +8,10 @@ const FITS = {
 };
 function defaultProject() {
   return {
-    name: '새 도안', garment: 'pullover', neck: 'round', sleeve: 'setin', size: '55', fit: 'standard',
-    body: { chest: 86, hip: 92, shoulder: 38, armDepth: 17, neckW: 15, armLen: 55, upperArm: 27, wrist: 15.5 },
+    name: '새 도안', dir: 'bu', garment: 'pullover', neck: 'round', sleeve: 'setin', size: 'w85', fit: 'standard',
+    body: { chest: 85, hip: 93, shoulder: 39.5, armDepth: 17, neckW: 15, armLen: 56.5, upperArm: 26.5, wrist: 15.5 },
     ease: { chest: 8, hip: 6, shoulder: 0, armDepth: 3, neckW: 2, armLen: 0, upperArm: 4, wrist: 4 },
-    design: { length: 58, ribH: 6, cuffH: 6, neckbandH: 2.5, bandW: 3, frontNeckD: 7, backNeckD: 2, vDepth: 20, shoulderDrop: 2, capTop: 8, buttons: 6, shoulderMethod: 'bo' },
+    design: { length: 57.5, ribH: 6, cuffH: 6, neckbandH: 2.5, bandW: 3, frontNeckD: 7, backNeckD: 2, vDepth: 20, shoulderDrop: 2, capTop: 8, buttons: 6, shoulderMethod: 'bo', cocoSlope: 'gsr' },
     gauge: { unit: '10cm', st: 22, row: 30, dens: 1.2, swatchW: 6, needle: 4, ribNeedle: 3.5, yarn: '', ballW: 50, ballLen: 120 },
     pattern: { bg: 'st', rib: '2x2', center: 'diamond10', side: 'rope6r', gap: 6, sep: 2, applyBack: false, applySleeve: true },
     progress: { back: 1, front: 1, rfront: 1, lfront: 1, sleeve: 1 },
@@ -137,6 +122,10 @@ function migrate(p) {
   ['body', 'ease', 'design', 'gauge', 'pattern', 'progress'].forEach(k => out[k] = { ...d[k], ...(p[k] || {}) });
   if (!Array.isArray(out.textDone)) out.textDone = [];
   if (!Array.isArray(out.grading)) out.grading = [];
+  // 예전 사이즈 키(44~88, k110, k130)를 새 키로
+  out.size = sizeKeyFix(out.size);
+  out.dir = out.sleeve === 'raglan' || out.sleeve === 'coco' ? 'td' : 'bu';
+  out.grading = [...new Set(out.grading.map(sizeKeyFix))].filter(k => PRESETS[k]);
   return out;
 }
 function saveDraft() { LS.set('draft', { P: S.P, id: S.id, dirty: S.dirty }); }
@@ -271,11 +260,12 @@ function bindInputs(root) {
     const b = e.target.closest('button'); if (!b) return;
     const path = g.dataset.seg, cur = getPath(S.P, path);
     let v = b.dataset.v; if (v === 'true') v = true; if (v === 'false') v = false;
+    if (path === 'dir' && v !== cur) S.P.sleeve = v === 'td' ? 'raglan' : 'setin';
     if (path === 'gauge.unit' && v !== cur) { const f = v === 'cm' ? 0.1 : 10; S.P.gauge.st = +(S.P.gauge.st * f).toFixed(2); S.P.gauge.row = +(S.P.gauge.row * f).toFixed(2); }
     setPath(S.P, path, v);
     g.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
     touch();
-    if (path === 'garment' || path === 'neck' || path === 'gauge.unit' || path === 'sleeve') renderTab();
+    if (path === 'garment' || path === 'neck' || path === 'gauge.unit' || path === 'sleeve' || path === 'dir') renderTab();
   }));
 }
 function updateLive() {
@@ -349,11 +339,11 @@ function bindProj() {
   $('#wadd').onclick = async () => { const n = $('#wname').value.trim(); if (!n || S.workers.includes(n)) return; S.workers.push(n); S.worker = n; LS.set('worker', n); await Store.saveWorkers().catch(() => { }); $('#hdr').dataset.built = ''; renderHeader(); renderTab(); };
   $('#wren').onclick = async () => { const n = $('#wname').value.trim(); if (!n) return toast('바꿀 이름을 입력하세요.'); const i = S.workers.indexOf(S.worker); S.workers[i] = n; S.worker = n; LS.set('worker', n); await Store.saveWorkers().catch(() => { }); $('#hdr').dataset.built = ''; renderHeader(); renderTab(); };
   $('#fmine').onchange = e => { S.filterMine = e.target.checked; renderTab(); };
-  $('#pnew').onclick = () => ask('새 도안을 만들까요? 저장하지 않은 변경은 사라집니다.', () => { S.P = defaultProject(); S.id = null; S.dirty = true; saveDraft(); updateSaveState(); S.tab = 'size'; recompute(); renderTab(); });
+  $('#pnew').onclick = () => ask('새 도안을 만들까요? 저장하지 않은 변경은 사라집니다.', () => { S.P = defaultProject(); S.sizeGroup = null; S.id = null; S.dirty = true; saveDraft(); updateSaveState(); S.tab = 'size'; recompute(); renderTab(); });
   $('#pdup').onclick = () => { S.P = JSON.parse(JSON.stringify(S.P)); S.P.name += ' 사본'; S.id = null; S.dirty = true; saveDraft(); updateSaveState(); toast('복제했습니다. 저장을 누르면 새 도안으로 저장됩니다.'); };
   document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
     const p = S.projects.find(x => x.id === b.dataset.open); if (!p) return;
-    const go = () => { S.P = migrate(p.data || {}); S.id = p.id; S.dirty = false; S.scrolled = {}; saveDraft(); updateSaveState(); S.tab = 'chart'; recompute(); renderTab(); };
+    const go = () => { S.P = migrate(p.data || {}); S.sizeGroup = null; S.id = p.id; S.dirty = false; S.scrolled = {}; saveDraft(); updateSaveState(); S.tab = 'chart'; recompute(); renderTab(); };
     S.dirty ? ask('저장하지 않은 변경이 있습니다. 그래도 열까요?', go) : go();
   });
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
@@ -372,6 +362,28 @@ function ask(msg, yes) {
 }
 
 /* ===================== 탭: 치수 ===================== */
+// 분류 먼저 고르고 그 분류의 사이즈를 고름
+function curGroupId() { const g = groupOf(S.P.size); return S.sizeGroup || (g ? g.id : 'w'); }
+function sizePickHTML(kind, isOn, withCustom) {
+  const gid = curGroupId(), g = SIZE_GROUPS.find(x => x.id === gid) || SIZE_GROUPS[0];
+  return `<div class="pgroups"><div class="seg sgroup">${SIZE_GROUPS.map(x => `<button type="button" data-sgroup="${x.id}" class="${x.id === g.id ? 'on' : ''}">${x.name}</button>`).join('')}</div>
+    <div class="chips">${g.keys.map(([k, l]) => `<span class="chip ${isOn(k) ? 'on' : ''}" data-${kind}="${k}">${l}</span>`).join('')}${withCustom ? `<span class="chip ${S.P.size === 'custom' ? 'on' : ''}" data-preset="custom">직접 입력</span>` : ''}</div></div>`;
+}
+function bindSizeGroups() {
+  document.querySelectorAll('[data-sgroup]').forEach(el => el.onclick = () => { S.sizeGroup = el.dataset.sgroup; renderTab(); });
+}
+function applySize(P, k) { const p = PRESETS[k]; if (!p) return; Object.keys(P.body).forEach(f => { if (p[f] !== undefined) P.body[f] = p[f]; }); P.design.length = p.length; }
+const SIZE_COLS = [['chest', '가슴'], ['hip', '엉덩이'], ['shoulder', '어깨'], ['armDepth', '진동'], ['neckW', '목너비'], ['armLen', '팔길이'], ['upperArm', '위팔'], ['wrist', '손목'], ['length', '총장']];
+function sizeTableHTML() {
+  const g = SIZE_GROUPS.find(x => x.id === curGroupId()) || SIZE_GROUPS[0];
+  return `<details class="stab"><summary>${g.name} 사이즈 치수표 보기</summary>
+    <div class="gwrap"><table class="tbl grade"><thead><tr><th>사이즈</th>${g.keys.map(([k, l]) => `<th class="${k === S.P.size ? 'cur' : ''}">${l}</th>`).join('')}</tr></thead><tbody>
+    ${g.keys[0][2].height ? `<tr><td>키</td>${g.keys.map(([k, , v]) => `<td class="${k === S.P.size ? 'cur' : ''}">${v.height}</td>`).join('')}</tr>` : ''}
+    ${SIZE_COLS.map(([f, n]) => `<tr><td>${n}</td>${g.keys.map(([k, , v]) => `<td class="${k === S.P.size ? 'cur' : ''}">${fmt(v[f])}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>
+    <p class="desc small">단위 cm. 근거: ${esc(SIZE_SRC)}. 표 값은 시작값이며 아래 칸에서 고쳐 쓸 수 있습니다.</p></details>`;
+}
+
 const BODY_ROWS = [
   ['chest', '가슴둘레', '가슴의 가장 높은 곳을 수평으로 한 바퀴'],
   ['hip', '엉덩이둘레(밑단)', '밑단이 오는 위치의 둘레. 밑단 폭 계산에 씀'],
@@ -397,9 +409,9 @@ function viewSize() {
   return `${welcomeHTML()}` + splitView(`
   <section class="card">
     <h2>신체 치수와 여유분</h2>
-    <div class="pgroups">${PRESET_GROUPS.map(([g, ks]) => `<div class="pg"><span class="pgl">${g}</span><div class="chips">${ks.map(k => `<span class="chip ${P.size === k ? 'on' : ''}" data-preset="${k}">${presetLabel(k)}</span>`).join('')}</div></div>`).join('')}
-      <div class="pg"><span class="pgl">기타</span><div class="chips"><span class="chip ${P.size === 'custom' ? 'on' : ''}" data-preset="custom">직접 입력</span></div></div></div>
-    <p class="desc">신체 치수는 여유를 넣지 않은 몸 치수입니다. 사이즈 버튼은 표준 체형 참고값을 채워 줍니다.</p>
+    ${sizePickHTML('preset', k => P.size === k, true)}
+    <p class="desc">신체 치수는 여유를 넣지 않은 몸 치수입니다. 사이즈 숫자는 시판 의류 표기 사이즈(맨몸 가슴둘레)이고, 버튼을 누르면 유니클로 치수표 기준 참고값을 채워 줍니다. 유아는 키(호), 아동은 호수입니다.</p>
+    ${sizeTableHTML()}
     <div class="fitbar"><span class="pgl">핏 여유분 자동 설정</span><div class="seg">${Object.entries(FITS).map(([k, f]) => `<button type="button" data-fit="${k}" class="${P.fit === k ? 'on' : ''}">${f.name} <small>${f.d}</small></button>`).join('')}</div></div>
     <div class="mtable">
       <div class="mh"><span>부위</span><span>신체 (cm)</span><span>여유 (cm)</span><span>완성 목표</span></div>
@@ -441,10 +453,17 @@ function viewSize() {
 }
 function bindSize() {
   const wc = $('#wclose'); if (wc) wc.onclick = () => { LS.set('welcomed', true); renderTab(); };
+  bindSizeGroups();
   document.querySelectorAll('[data-preset]').forEach(el => el.onclick = () => {
     const k = el.dataset.preset;
+    const before = groupOf(S.P.size);
     S.P.size = k;
-    if (PRESETS[k]) { const p = PRESETS[k]; Object.keys(S.P.body).forEach(f => { if (p[f] !== undefined) S.P.body[f] = p[f]; }); S.P.design.length = p.length; }
+    if (PRESETS[k]) {
+      applySize(S.P, k);
+      // 분류(성인/유아/아동)가 바뀌면 고무단, 목 깊이 같은 디자인 치수도 그 분류 기본값으로
+      const g = groupOf(k);
+      if (g && (!before || before.dz !== g.dz)) Object.assign(S.P.design, g.dz);
+    }
     touch(); renderTab();
   });
   document.querySelectorAll('[data-fit]').forEach(el => el.onclick = () => {
@@ -469,12 +488,14 @@ function viewDesign() {
     <h2>옷 형태</h2>
     ${seg('garment', '종류', [['pullover', '풀오버'], ['cardigan', '가디건']])}
     ${seg('neck', '목선', [['round', '라운드넥'], ['v', 'V넥']])}
-    ${seg('sleeve', '소매', [['setin', '셋인 슬리브'], ['drop', '드롭숄더']])}
-    ${seg('design.shoulderMethod', '어깨 처리', [['bo', '계단식 덮어씌우기'], ['sr', '되돌아뜨기 후 빼뜨기 잇기']])}
+    ${seg('dir', '뜨는 방향', [['bu', '바텀업 (조각 뜨기)'], ['td', '탑다운 (목부터)']])}
+    ${P.dir === 'td' ? seg('sleeve', '소매', [['raglan', '래글런'], ['coco', '코코닛츠 메소드 (셋인형)']]) : seg('sleeve', '소매', [['setin', '셋인 슬리브'], ['drop', '드롭숄더']])}
+    ${P.dir === 'td' ? (P.sleeve === 'coco' ? seg('design.cocoSlope', '어깨 경사 방식', [['gsr', '독일식 되돌아뜨기'], ['inc', '코늘림']]) : '') : seg('design.shoulderMethod', '어깨 처리', [['bo', '계단식 덮어씌우기'], ['sr', '되돌아뜨기 후 빼뜨기 잇기']])}
+    ${P.dir === 'td' ? `<p class="desc small">${P.sleeve === 'coco' ? '코코닛츠 메소드: 뒷목 코잡기, 뒤 어깨 경사, 어깨에서 앞판 줍기, 앞목, 소매 코 줍고 요크, 겨드랑이에서 나누기 순서로 꿰매지 않고 뜹니다.' : '탑다운 래글런: 목에서 코를 잡아 래글런 선 4곳에서 늘리고, 겨드랑이에서 소매와 몸판을 나눕니다.'}</p>` : ''}
   </section>
   <section class="card">
     <h2>바탕과 고무단</h2>
-    ${seg('pattern.bg', '바탕 무늬', [['st', '메리야스'], ['rev', '안메리야스'], ['seed', '멍석뜨기'], ['garter', '가터']])}
+    ${seg('pattern.bg', '바탕 무늬', [['st', '메리야스'], ['rev', '안메리야스'], ['seed', '1코 1단 멍석'], ['seed12', '1코 2단 멍석'], ['seed22', '2코 2단 멍석'], ['garter', '가터']])}
     ${seg('pattern.rib', '고무단', [['1x1', '1코 고무'], ['2x2', '2코 고무'], ['1x1t', '1코 꼬아 고무'], ['garter', '가터']])}
   </section>
   <section class="card">
@@ -493,7 +514,8 @@ function viewDesign() {
 const ALLOC_COL = { sel: '#78716C', bg: '#ECE6DE', purl: '#B8ADA2', center: '#F5E6C8', side: '#E8C9BB', gap: '#F3EFEA' };
 function allocHTML() {
   const C = S.C; if (!C) return '';
-  const pc = C.pieces.find(p => p.kind === 'front' || p.kind === 'rfront');
+  const pc = C.pieces.find(p => ['front', 'rfront', 'bfront', 'blfront'].includes(p.kind));
+  if (!pc) return '';
   const lay = pc.lay, Nc = pc.info.Nc;
   const bgSide = (Nc - lay.panelW - 2) / 2;
   const segs = [{ t: 'sel', n: 1, name: '가장자리' }, { t: 'bg', n: bgSide, name: '바탕' }];
@@ -505,9 +527,9 @@ function allocHTML() {
   segs.push({ t: 'bg', n: bgSide, name: '바탕' }, { t: 'sel', n: 1, name: '가장자리' });
   const cm = cmFor(Nc, lay, C.gs, C.dens);
   const nsh = pc.info.Nsh;
-  const risk = lay.panelW > nsh;
+  const risk = nsh != null && lay.panelW > nsh;
   return `<div class="alloc">
-    <h3>${pc.kind === 'rfront' ? '오른앞판' : '앞판'} 가슴 폭 코 배열 (${Nc}코)</h3>
+    <h3>${pc.kind === 'rfront' ? '오른앞판' : pc.kind === 'blfront' ? '왼앞판' : '앞판'} 가슴 폭 코 배열 (${Nc}코)</h3>
     <div class="abar">${segs.filter(s => s.n > 0).map(s => `<span style="flex:${s.n} 0 0;background:${ALLOC_COL[s.t]}" title="${s.name} ${s.n}코">${s.n >= Math.max(4, Nc / 24) ? s.n : ''}</span>`).join('')}</div>
     <div class="alegend">${[['sel', '가장자리'], ['bg', '바탕'], ['purl', '안뜨기'], ['gap', '사이바탕'], ['side', '양옆무늬'], ['center', '중앙무늬']].map(([k, n]) => `<span><i style="background:${ALLOC_COL[k]}"></i>${n}</span>`).join('')}</div>
     <p class="aformula">${segs.filter(s => s.n > 0).map(s => `[${s.name} ${s.n}코]`).join(' + ')} = 총 ${Nc}코 (${fmt(cm)}cm)</p>
@@ -692,21 +714,31 @@ function placeTool(E, r, c, tool) {
 }
 
 /* ===================== 탭: 차트 (단 트래커) ===================== */
-function curPiece() { return S.C ? (S.C.pieces.find(p => p.id === S.piece) || S.C.pieces[0]) : null; }
+// 차트 탭에서 볼 사이즈: 그레이딩 사이즈 중 하나를 고르면 그 사이즈로 계산한 차트
+function chartSizes() { const g = gradeSizes(); if (g.length < 2) return []; return S.P.size && PRESETS[S.P.size] && !g.includes(S.P.size) ? [S.P.size, ...g] : g; }
+function chartC() {
+  const k = S.chartSize;
+  if (!S.C || !k || k === S.P.size || !chartSizes().includes(k)) return S.C;
+  const x = gradingResults().find(y => y.k === k);
+  return x && x.C ? x.C : S.C;
+}
+function curPiece() { const C = chartC(); return C ? (C.pieces.find(p => p.id === S.piece) || C.pieces[0]) : null; }
 function curRow(pc) { const v = (S.P.progress || {})[pc.id] || 1; return clamp(v, 1, pc.total); }
 function chartOpts(pc) {
-  const o = S.chart, ch = o.ratio ? o.cell * S.C.gs / S.C.gr : o.cell;
+  const o = S.chart, C = chartC(), ch = o.ratio ? o.cell * C.gs / C.gr : o.cell;
   return { cw: o.cell, ch, showKnit: o.showKnit, tint: o.tint, center: o.center, hlRow: curRow(pc), dimBelow: o.dim };
 }
 function viewChart() {
-  const C = S.C;
-  if (!C) return warnBox();
+  if (!S.C) return warnBox();
+  const C = chartC();
   const pc = curPiece();
   const o = S.chart;
   const syms = usedSymbols([pc]);
+  const cs = chartSizes(), curK = C === S.C ? S.P.size : S.chartSize;
   return `
   <div data-live="warn"></div>
   <section class="card chartcard">
+    ${cs.length ? `<div class="row wrap csz"><span class="pgl">사이즈</span><div class="chips">${cs.map(k => `<span class="chip ${k === curK ? 'on' : ''}" data-csize="${k}">${esc(presetLabel(k))}${k === S.P.size ? ' (기준)' : ''}</span>`).join('')}</div></div>` : ''}
     <div class="chips">${C.pieces.map(p => `<span class="chip ${p.id === pc.id ? 'on' : ''}" data-piece="${p.id}">${esc(p.name)}</span>`).join('')}</div>
     <details class="copts" ${S.chartOpts ?? window.innerWidth > 640 ? 'open' : ''}><summary>보기 옵션과 저장</summary>
     <div class="row wrap ctl">
@@ -730,20 +762,24 @@ function viewChart() {
 function rowBadges(pc, r) {
   const row = pc.codes[r] || [];
   const out = [];
-  if (row.some(v => v === 'bo' || v === 'sr' || v === 'k2tog' || v === 'ssk' || v === 'm1l' || v === 'm1r') && r !== pc.total) out.push(['shape', '⚡ 줄임/늘림 단']);
+  if (row.some(v => v === 'bo' || v === 'sr' || v === 'k2tog' || v === 'ssk' || v === 'm1l' || v === 'm1r' || v === 'co') && r !== pc.total) out.push(['shape', '⚡ 줄임/늘림 단']);
   if (row.some(v => v && parseTok(v))) out.push(['cross', '🔀 교차뜨기 포함']);
-  if (r === pc.ribRows) out.push(['rib', '🧶 고무단 마지막 단']);
+  if (!pc.ribEnd && r === pc.ribRows) out.push(['rib', '🧶 고무단 마지막 단']);
+  if (pc.ribEnd && pc.ribRows && r === pc.total - pc.ribRows + 1) out.push(['rib', '🧶 고무단 시작']);
   const nxt = pc.rows[r + 1] || [];
   if ((pc.rows[r] || []).length === 1 && nxt.length === 2) out.push(['split', '✂ 이 단 뒤 좌우 분리']);
+  if (pc.roundFrom > 1 && r === pc.roundFrom) out.push(['split', '⭕ 이 단부터 원형']);
   if (r === pc.total) out.push(['end', '🏁 마지막 단']);
   return out;
 }
 function rowTextHTML(pc, r) {
   const row = pc.codes[r]; if (!row) return '';
-  const rs = r % 2 === 1;
-  const idx = []; row.forEach((v, c) => { if (v !== null && v !== undefined && v !== '>') idx.push(c); });
-  const seq = (rs ? idx.slice().reverse() : idx).map(c => row[c]);
-  return `<b>${r}단 (${rs ? '겉면, 오른쪽부터' : '안면, 왼쪽부터'}, ${row.filter(v => v !== null && v !== undefined).length}코)</b> ${esc(runsText(seq, !rs))}`;
+  const rs = r % 2 === 1 || (pc.roundFrom && r >= pc.roundFrom);
+  // 조각이 둘로 나뉜 단(앞목 양쪽, 되돌아뜨기)은 조각마다 따로 읽음
+  const segs = (pc.rows[r] || []).slice().sort((a, b) => a.l - b.l);
+  const part = s => { const idx = []; for (let c = s.l; c <= s.r; c++) { const v = row[c]; if (v !== null && v !== undefined && v !== '>') idx.push(c); } return (rs ? idx.reverse() : idx).map(c => row[c]); };
+  const rd = pc.roundFrom && r >= pc.roundFrom;
+  return `<b>${r}단 (${rd ? '원형, 오른쪽부터' : rs ? '겉면, 오른쪽부터' : '안면, 왼쪽부터'}, ${row.filter(v => v !== null && v !== undefined).length}코)</b> ${esc((rs ? segs.slice().reverse() : segs).map(s => runsText(part(s), !rs)).join(' / 건너서: '))}`;
 }
 function renderRowBar() {
   const pc = curPiece(); const bar = $('#rowbar'); if (!pc || !bar) return;
@@ -795,6 +831,7 @@ function setRow(r, ensureVisible) {
 function bindChart() {
   const co = document.querySelector('.copts'); if (co) co.ontoggle = () => { S.chartOpts = co.open; };
   document.querySelectorAll('[data-piece]').forEach(el => el.onclick = () => { S.piece = el.dataset.piece; renderTab(); });
+  document.querySelectorAll('[data-csize]').forEach(el => el.onclick = () => { S.chartSize = el.dataset.csize; S.scrolled = {}; renderTab(); });
   $('#zoom').oninput = e => { S.chart.cell = +e.target.value; LS.set('chart', S.chart); renderChartBox(); };
   document.querySelectorAll('[data-c]').forEach(el => el.onchange = () => { S.chart[el.dataset.c] = el.checked; LS.set('chart', S.chart); renderChartBox(); });
   $('#cfit').onclick = () => {
@@ -851,19 +888,82 @@ document.addEventListener('keydown', e => {
 
 /* ===================== 사이즈 그레이딩 ===================== */
 function gradeSizes() {
-  const g = (S.P.grading || []).filter(k => PRESETS[k]);
-  return g.length ? g : [];
+  const gid = curGroupId();
+  return (S.P.grading || []).filter(k => PRESETS[k] && groupOf(k).id === gid);
 }
+const gradeCache = { key: null, res: null };
+function sizeProject(k) { const P2 = JSON.parse(JSON.stringify(S.P)); applySize(P2, k); return P2; }
 function gradingResults() {
-  return gradeSizes().map(k => {
-    const P2 = JSON.parse(JSON.stringify(S.P));
-    const p = PRESETS[k];
-    Object.keys(P2.body).forEach(f => { if (p[f] !== undefined) P2.body[f] = p[f]; });
-    P2.design.length = p.length;
-    try { return { k, C: compute(P2, allMotifs()) }; } catch (e) { return { k, C: null }; }
+  // 같은 입력이면 다시 계산하지 않음 (차트 탭 사이즈 전환, PDF에서 여러 번 부름)
+  const key = JSON.stringify([gradeSizes(), { ...S.P, progress: 0, textDone: 0, memo: 0, textGraded: 0 }, S.motifs]);
+  if (gradeCache.key === key) return gradeCache.res;
+  const res = gradeSizes().map(k => {
+    const P2 = sizeProject(k);
+    try { return { k, P: P2, C: compute(P2, allMotifs()) }; } catch (e) { return { k, P: P2, C: null }; }
   });
+  gradeCache.key = key; gradeCache.res = res;
+  return res;
+}
+function gradingRowsTD(res) {
+  const pick = (C, ...kinds) => C.pieces.find(p => kinds.includes(p.kind));
+  const yarn = C => C.yarnG ? Math.ceil(C.yarnG / 10) * 10 + 'g' : '-';
+  const coco = res.some(x => x.C && x.C.td === 'coco');
+  const rows = coco ? [
+    ['완성 치수', null],
+    ['가슴둘레(cm)', C => fmt(C.finished.chest)],
+    ['총장(cm)', C => fmt(C.finished.length)],
+    ['어깨너비(cm)', C => fmt(C.finished.shoulder)],
+    ['진동깊이(cm)', C => fmt(C.finished.armDepth)],
+    ['소매 밑길이(cm)', C => fmt(C.finished.sleeveLen)],
+    ['소매통(cm)', C => fmt(C.finished.upper)],
+    ['뒤판 어깨', null],
+    ['코잡기', C => C.gsr ? `${C.NshB}코` : `${C.neckB + 2 * C.parts[C.steps]}코`],
+    ['어깨 경사', C => `${C.parts.slice(0, C.steps).join(', ')}코씩`],
+    ['윗부분 단 수', C => C.Hu + '단'],
+    ['앞판', null],
+    ['앞목', C => { const n = pick(C, 'yfront', 'ylfront').info.neck; return `${notation(n.blocks)}${n.center ? `, 중앙 ${n.center}코` : ''}`; }],
+    ['요크', null],
+    ['소매 줍기', C => C.Spick + '코'],
+    ['소매산 늘림', C => notation(C.capBlocks)],
+    ['진동 늘림', C => C.armBlocks.length ? notation(C.armBlocks) : '없음'],
+    ['요크 단 수', C => C.Hy + '단'],
+    ['겨드랑이 코', C => C.u + '코'],
+    ['몸판', null],
+    ['옆선', C => { const s = pick(C, 'bback').info.side; return s ? `평 ${s.top}단, ${notation(s.blocks)} ${s.kind === 'inc' ? '늘림' : '줄임'}` : '없음'; }],
+    ['소매', null],
+    ['줄임', C => { const i = pick(C, 'tsleeve').info; return i.decBlocks.length ? `평 ${i.top}단, ${notation(i.decBlocks)}` : '없음'; }],
+    ['소맷부리 코', C => C.Ncuff + '코'],
+    ['재료', null],
+    ['실 사용량', yarn],
+  ] : [
+    ['완성 치수', null],
+    ['가슴둘레(cm)', C => fmt(C.finished.chest)],
+    ['총장(cm)', C => fmt(C.finished.length)],
+    ['요크 깊이(cm)', C => fmt(C.finished.armDepth)],
+    ['소매 밑길이(cm)', C => fmt(C.finished.sleeveLen)],
+    ['소매통(cm)', C => fmt(C.finished.upper)],
+    ['요크', null],
+    ['목 코잡기', C => `${2 + 2 * C.S0 + C.B0}코 (뒤 ${C.B0}, 소매 ${C.S0}씩)`],
+    ['몸판 래글런', C => notation(pick(C, 'yback').info.rag)],
+    ['소매 래글런', C => notation(pick(C, 'ysleeve').info.rag)],
+    ['앞목', C => { const n = pick(C, 'yfront', 'ylfront').info.neck; return `${notation(n.blocks)}${n.center ? `, 중앙 ${n.center}코` : ''}`; }],
+    ['요크 단 수', C => C.Y + '단'],
+    ['나누기 코 수', C => `앞 ${C.Fsep}, 뒤 ${C.Bsep}, 소매 ${C.Ssep}`],
+    ['겨드랑이 코', C => C.u + '코'],
+    ['몸판', null],
+    ['옆선', C => { const s = pick(C, 'bback').info.side; return s ? `평 ${s.top}단, ${notation(s.blocks)} ${s.kind === 'inc' ? '늘림' : '줄임'}` : '없음'; }],
+    ['몸판 단 수', C => C.bodyRows + '단'],
+    ['소매', null],
+    ['줄임', C => { const i = pick(C, 'tsleeve').info; return i.decBlocks.length ? `평 ${i.top}단, ${notation(i.decBlocks)}` : '없음'; }],
+    ['소맷부리 코', C => C.Ncuff + '코'],
+    ['소매 단 수', C => C.sRows + '단'],
+    ['재료', null],
+    ['실 사용량', yarn],
+  ];
+  return rows.map(([label, fn]) => fn ? { label, vals: res.map(x => { try { return x.C ? fn(x.C) : '-'; } catch (e) { return '-'; } }) } : { head: label });
 }
 function gradingRows(res) {
+  if (res.some(x => x.C && x.C.td)) return gradingRowsTD(res);
   const pick = (C, kind) => C.pieces.find(p => p.kind === kind || (kind === 'front' && p.kind === 'rfront'));
   const yarn = C => C.yarnG ? Math.ceil(C.yarnG / 10) * 10 + 'g' : '-';
   const rows = [
@@ -908,8 +1008,8 @@ function gradingHTML() {
   const rows = res.length ? gradingRows(res) : [];
   return `<div class="hrow"><h2>사이즈 그레이딩 표</h2></div>
     <p class="desc">같은 디자인, 여유분, 게이지로 여러 사이즈를 한 번에 계산합니다. 판매용 도안의 사이즈별 수치표로 쓰세요. 사이즈를 누르면 넣고 뺍니다.</p>
-    <div class="pgroups">${PRESET_GROUPS.map(([g, ks]) => `<div class="pg"><span class="pgl">${g}</span><div class="chips">${ks.map(k => `<span class="chip ${sel.has(k) ? 'on' : ''}" data-grade="${k}">${presetLabel(k)}</span>`).join('')}</div></div>`).join('')}</div>
-    ${res.length ? `<div class="gwrap"><table class="tbl grade"><thead><tr><th></th>${res.map(x => `<th class="${x.k === S.P.size ? 'cur' : ''}">${presetLabel(x.k)}${x.k.startsWith('m') ? ' (남)' : x.k.startsWith('k') ? ' (아동)' : ''}</th>`).join('')}</tr></thead><tbody>
+    ${sizePickHTML('grade', k => sel.has(k), false)}
+    ${res.length ? `<div class="gwrap"><table class="tbl grade"><thead><tr><th></th>${res.map(x => `<th class="${x.k === S.P.size ? 'cur' : ''}">${presetLabel(x.k)}</th>`).join('')}</tr></thead><tbody>
     ${rows.map(r => r.head ? `<tr class="gh"><td colspan="${res.length + 1}">${esc(r.head)}</td></tr>` : `<tr><td>${esc(r.label)}</td>${r.vals.map((v, i) => `<td class="${res[i].k === S.P.size ? 'cur' : ''}">${esc(v)}</td>`).join('')}</tr>`).join('')}
     </tbody></table></div>
     ${res.some(x => x.C && x.C.warnings.length) ? `<div class="alert"><b>확인이 필요한 사이즈</b><ul>${res.filter(x => x.C && x.C.warnings.length).map(x => `<li>${presetLabel(x.k)}: ${esc(x.C.warnings.join(' '))}</li>`).join('')}</ul></div>` : ''}` : '<p class="desc">사이즈를 두 개 이상 고르면 표가 나옵니다.</p>'}`;
@@ -917,19 +1017,20 @@ function gradingHTML() {
 function gradedOn() { return !!S.P.textGraded && gradeSizes().length >= 2; }
 function gradedText() {
   const list = [];
-  gradingResults().forEach(x => { if (x.C) { const P2 = JSON.parse(JSON.stringify(S.P)); const p = PRESETS[x.k]; Object.keys(P2.body).forEach(f => { if (p[f] !== undefined) P2.body[f] = p[f]; }); P2.design.length = p.length; list.push({ label: presetLabel(x.k), T: buildText(P2, x.C), C: x.C }); } });
+  gradingResults().forEach(x => { if (x.C) list.push({ label: presetLabel(x.k), T: buildText(x.P, x.C, { mark: true }), C: x.C, k: x.k }); });
   return { T: mergeTexts(list), list };
 }
 function curText() { return gradedOn() ? gradedText().T : S.T; }
 function bindGrading() {
   document.querySelectorAll('[data-grade]').forEach(el => el.onclick = () => {
-    const k = el.dataset.grade, cur = new Set(S.P.grading || []);
+    const k = el.dataset.grade, cur = new Set(gradeSizes());
     cur.has(k) ? cur.delete(k) : cur.add(k);
     const order = PRESET_GROUPS.flatMap(([, ks]) => ks);
     S.P.grading = order.filter(x => cur.has(x));
     touchQuiet();
     $('#grading').innerHTML = gradingHTML(); bindGrading();
   });
+  document.querySelectorAll('#grading [data-sgroup]').forEach(el => el.onclick = () => { S.sizeGroup = el.dataset.sgroup; $('#grading').innerHTML = gradingHTML(); bindGrading(); });
 }
 
 /* ===================== 탭: 도식화 ===================== */
@@ -949,6 +1050,40 @@ function scheduleRows(pc, C) {
     const row = pc.codes[r] || [], segs = pc.rows[r] || [];
     const acts = [];
     if (r === pc.total && pc.finalBo) { out.push({ r, text: `남은 ${live(r)}코 모두 덮어씌우기`, after: 0 }); continue; }
+    if (pc.td) {
+      // 탑다운: 래글런 늘림, 앞목 늘림, 코 만들기, 옆선/소매 줄임
+      const Rn = (C.Rn || 0) + 1;
+      const neckEdge = (sg, side) => (pc.kind === 'yfront' && ((sg.name === 'L' && side === 'right') || (sg.name === 'R' && side === 'left'))) || (pc.kind === 'ylfront' && side === 'right' && r <= Rn) || (pc.kind === 'yrfront' && side === 'left' && r <= Rn);
+      segs.forEach(sg => {
+        let c = sg.l;
+        while (c <= sg.r) {
+          const v = row[c];
+          if (v === 'co') {
+            let e = c; while (e + 1 <= sg.r && row[e + 1] === 'co') e++;
+            const n = e - c + 1, side = c === sg.l ? 'left' : e === sg.r ? 'right' : 'center';
+            const zn = side === 'center' ? '앞중심' : neckEdge(sg, side) ? '앞목' : r === 1 ? '겨드랑이' : '옆선';
+            acts.push({ zone: zn, side: zn === '앞목' && sg.name !== 'main' ? 'seg' + sg.name : side, kind: '코 만들기', n });
+            c = e + 1; continue;
+          }
+          if (v === 'm1l' || v === 'm1r' || v === 'k2tog' || v === 'ssk') {
+            const sd = c - sg.l < sg.r - c ? 'left' : 'right';
+            const inc = v === 'm1l' || v === 'm1r';
+            const zn = inc ? (neckEdge(sg, sd) ? '앞목' : pc.kind[0] === 'y' ? '래글런' : '옆선') : (pc.kind === 'tsleeve' ? '소매 밑선' : '옆선');
+            acts.push({ zone: zn, side: zn === '앞목' && sg.name !== 'main' ? 'seg' + sg.name : sd, kind: inc ? '늘림' : '줄임', n: 1 });
+          }
+          c++;
+        }
+      });
+      const joinNow = pc.roundFrom > 1 && r === pc.roundFrom;
+      if (!acts.length && !joinNow) continue;
+      const merged = [];
+      acts.forEach(a => { const twin = merged.find(m => m.zone === a.zone && m.kind === a.kind && m.n === a.n && m.side !== a.side && m.side !== 'both' && a.side !== 'center'); if (twin) twin.side = 'both'; else merged.push({ ...a }); });
+      const sideTxt = x => x === 'both' ? '양쪽 ' : x === 'left' ? '왼쪽 ' : x === 'right' ? '오른쪽 ' : x === 'segL' ? '(왼앞판) ' : x === 'segR' ? '(오른앞판) ' : '';
+      const parts = merged.map(a => `${a.zone} ${sideTxt(a.side)}${a.n}코${a.side === 'both' ? '씩' : ''} ${a.kind}`);
+      if (joinNow) parts.push('이 단부터 원형으로 잇기');
+      out.push({ r, text: parts.join(', '), after: r < pc.total ? live(r + 1) : 0 });
+      continue;
+    }
     segs.forEach(s => {
       let c = s.l;
       while (c <= s.r) {
@@ -991,10 +1126,11 @@ function scheduleHTML(pc, C) {
     ${rows.map(x => `<tr><td>${x.r}</td><td>${x.r % 2 ? '겉면' : '안면'}</td><td>${esc(x.text)}</td><td>${x.after ? x.after + '코' : '끝'}</td></tr>`).join('')}
     </tbody></table></details>`;
 }
+function cocoCalcRows(C) { return `<tr><td>단 수</td><td>뒤 어깨 ${C.backTopRows}단, 앞판 ${C.frontTopRows}단, 요크 ${C.yokeRows}단, 몸판 ${C.bodyRows}단, 소매 ${C.sRows}단</td></tr><tr><td>소매 줍기</td><td>진동 한쪽 ${C.armPick}코, 소매산 늘림 ${notation(C.capBlocks)}</td></tr>`; }
 function viewSchem() {
   const C = S.C; if (!C) return warnBox();
   const f = C.finished;
-  const tgt = { chest: C.T.chest, hem: C.T.hip, length: C.T.length, shoulder: C.isDrop ? null : C.T.shoulder, armDepth: C.T.armDepth, neckW: C.T.neckW, sleeveLen: C.T.armLen, upper: C.isDrop ? null : C.T.upper, cuff: C.T.wrist };
+  const tgt = { chest: C.T.chest, hem: C.T.hip, length: C.T.length, shoulder: C.isDrop || C.td === 'raglan' ? null : C.T.shoulder, armDepth: C.T.armDepth, neckW: C.T.neckW, sleeveLen: C.T.armLen, upper: C.isDrop ? null : C.T.upper, cuff: C.T.wrist };
   const names = { chest: '가슴둘레', hem: '밑단둘레', length: '총장', shoulder: '어깨너비', armDepth: '진동깊이', neckW: '목너비', sleeveLen: '소매길이', upper: '소매통', cuff: '소맷부리' };
   const sign = v => (v > 0 ? '+' : v < 0 ? '-' : '') + fmt(Math.abs(v));
   const y = yarnInfo(C);
@@ -1022,10 +1158,11 @@ function viewSchem() {
     <table class="tbl"><tbody>
       <tr><td>게이지</td><td>${fmt(C.gs * 10)}코 x ${fmt(C.gr * 10)}단 / 10cm, 꽈배기 수축 ${fmt(C.dens)}배</td></tr>
       <tr><td>앞판 무늬 폭</td><td>${C.layFront.panelW}코 (교차 무늬 ${C.layFront.cableSts}코)</td></tr>
-      <tr><td>단 수</td><td>고무단 ${C.ribRows}단, 옆선 ${C.sideRows}단, 진동 ${C.ahRows}단, 총 ${C.totalRows}단</td></tr>
+      ${C.td === 'raglan' ? `<tr><td>단 수</td><td>요크 ${C.Y}단, 몸판 ${C.bodyRows}단(고무단 ${C.ribRows}단 포함), 소매 ${C.sRows}단</td></tr>
+      <tr><td>요크</td><td>목 코잡기 ${2 + 2 * C.S0 + C.B0}코, 래글런 몸판 쪽 ${C.nb}회, 소매 쪽 ${C.ns}회, 겨드랑이 ${C.u}코</td></tr>` : C.td === 'coco' ? cocoCalcRows(C) : `<tr><td>단 수</td><td>고무단 ${C.ribRows}단, 옆선 ${C.sideRows}단, 진동 ${C.ahRows}단, 총 ${C.totalRows}단</td></tr>
       <tr><td>진동 줄임</td><td>${C.A > 0 ? `한쪽 ${C.A}코, 진동둘레(앞뒤) ${fmt(2 * C.ahLen)}cm` : '없음(드롭숄더)'}</td></tr>
       ${C.capInfo ? `<tr><td>소매산</td><td>높이 ${fmt(C.capInfo.hc / C.gr)}cm, 소매산 둘레 ${fmt(C.capInfo.capTotal)}cm, 진동둘레와 차이 ${sign(C.capInfo.easeC)}cm (권장 0~3cm)</td></tr>` : ''}
-      <tr><td>어깨</td><td>한쪽 ${C.shSts}코, ${notation(C.shParts.map(a => ({ len: 2, amt: a })))}</td></tr>
+      <tr><td>어깨</td><td>한쪽 ${C.shSts}코, ${notation(C.shParts.map(a => ({ len: 2, amt: a })))}</td></tr>`}
       <tr><td>넥밴드</td><td>목둘레 약 ${fmt(C.neckCirc)}cm, ${C.neckPick}코 줍기</td></tr>
       <tr><td>실 사용량</td><td>${y ? `약 ${y.grams}g${y.balls ? `, ${y.balls}볼` : ''}${y.meters ? `, 약 ${y.meters.toLocaleString()}m` : ''} (총 ${C.cells.toLocaleString()}코 기준, 여유 8% 포함)` : '스와치 무게를 넣으면 계산합니다'}</td></tr>
     </tbody></table>
@@ -1066,7 +1203,7 @@ function viewText() {
   const n = (S.P.textDone || []).length;
   const gs = gradeSizes(), on = gradedOn();
   const gbar = gs.length >= 2
-    ? `<label class="chk"><input type="checkbox" id="tgrade" ${on ? 'checked' : ''}><span>사이즈 병기 ${esc(presetLabel(gs[0]))}(${esc(gs.slice(1).map(presetLabel).join(', '))})</span></label>`
+    ? `<label class="chk"><input type="checkbox" id="tgrade" ${on ? 'checked' : ''}><span>사이즈 병기 ${esc(altJoin(gs.map(presetLabel)))}</span></label>`
     : `<span class="desc small">도식화 탭의 사이즈 그레이딩 표에서 사이즈를 2개 이상 고르면 사이즈 병기 도안(예: 108(112, 116)코)을 만들 수 있습니다.</span>`;
   return `<div data-live="warn"></div><section class="card doc">
     <div class="hrow"><p class="desc small">${on ? '판매용 사이즈 병기 도안입니다. 완료 체크는 한 사이즈 도안에서만 씁니다.' : `문단을 누르면 완료 표시가 됩니다. 뜨면서 한 단계씩 체크하세요. (완료 ${n}개)`}</p>
@@ -1101,9 +1238,10 @@ function viewPrint() {
       <label class="fld"><span class="lb">차트 칸 크기</span><span class="iw"><select id="pcell">${[3, 4, 5, 6].map(v => `<option value="${v}" ${o.cell === v ? 'selected' : ''}>${v}mm</option>`).join('')}</select></span></label>
     </div>
     <div class="row wrap">
-      ${[['cover', '표지와 재료'], ['schem', '도식화'], ['grade', '사이즈 그레이딩 표'], ['text', '서술형 도안'], ['motifs', '무늬 차트'], ['charts', '조각 차트'], ['ratio', '게이지 비율 칸']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-pr="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
+      ${[['cover', '표지와 재료'], ['schem', '도식화'], ['grade', '사이즈 그레이딩 표'], ['text', '서술형 도안'], ['motifs', '무늬 차트'], ['charts', '조각 차트 넣기'], ['ratio', '게이지 비율 칸']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-pr="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
     </div>
-    ${gradeSizes().length >= 2 ? `<div class="row wrap"><label class="chk"><input type="checkbox" id="pgraded" ${gradedOn() ? 'checked' : ''}><span>표지와 서술형 도안에 사이즈 병기 (${esc(gradeSizes().map(presetLabel).join(', '))})</span></label></div>` : ''}
+    ${gradeSizes().length >= 2 ? `<div class="row wrap"><label class="chk"><input type="checkbox" data-pr="chartAll" ${o.chartAll !== false ? 'checked' : ''}><span>조각 차트를 사이즈마다 넣기 (${esc(altJoin(chartSizes().map(presetLabel)))}). 끄면 기준 사이즈 차트만</span></label></div>` : ''}
+    ${gradeSizes().length >= 2 ? `<div class="row wrap"><label class="chk"><input type="checkbox" id="pgraded" ${gradedOn() ? 'checked' : ''}><span>표지와 서술형 도안에 사이즈 병기 (${esc(altJoin(gradeSizes().map(presetLabel)))})</span></label></div>` : ''}
     <div class="grid">
       <label class="fld"><span class="lb">표지 브랜드</span><span class="iw"><input class="inp0" id="bko" value="${esc(S.brand.ko)}" placeholder="예: 달의정원 손뜨개"></span></label>
       <label class="fld"><span class="lb">영문 이름</span><span class="iw"><input class="inp0" id="ben" value="${esc(S.brand.en)}" placeholder="예: Luna's Garden"></span></label>
@@ -1162,7 +1300,7 @@ function bindPrint() {
       const P = j.type === 'project' ? j.P : (j.current && j.current.P) || j.data || null;
       if (!P || !P.body) throw new Error('도안 파일이 아닙니다');
       for (const m of j.motifs || []) if (m && m.id && m.rows && !S.motifs.find(x => x.id === m.id)) await Store.saveMotif(m);
-      const go = () => { S.P = migrate(P); S.id = null; S.dirty = true; S.scrolled = {}; saveDraft(); updateSaveState(); S.tab = 'chart'; recompute(); renderTab(); toast('도안을 불러왔습니다. 저장을 누르면 내 목록에 들어갑니다.'); };
+      const go = () => { S.P = migrate(P); S.sizeGroup = null; S.id = null; S.dirty = true; S.scrolled = {}; saveDraft(); updateSaveState(); S.tab = 'chart'; recompute(); renderTab(); toast('도안을 불러왔습니다. 저장을 누르면 내 목록에 들어갑니다.'); };
       S.dirty ? ask('저장하지 않은 변경이 있습니다. 불러온 도안으로 바꿀까요?', go) : go();
     } catch (err) { toast('도안 파일을 읽지 못했습니다.'); }
     e.target.value = '';
@@ -1334,15 +1472,15 @@ function buildPages(C) {
   if (o.cover || o.text) {
     const blocks = [];
     const G = gradedOn() ? gradedText() : null;
-    const fv = k => G ? mergeVals(G.list.map(x => fmt(x.C.finished[k])), G.list.map(x => x.label)) : fmt(C.finished[k]);
+    const fv = k => G ? mergeVals(G.list.map(x => fmt(x.C.finished[k])), G.list.map(x => x.label), { always: true, unit: 'cm' }) : fmt(C.finished[k]) + 'cm';
     if (o.cover) {
-      const sizeTxt = G ? `, 사이즈 ${G.list[0].label}(${G.list.slice(1).map(x => x.label).join(', ')})` : P.size && P.size !== 'custom' ? `, 기준 사이즈 ${presetLabel(P.size)}` : '';
+      const sizeTxt = G ? `, 사이즈 ${altJoin(G.list.map(x => x.label))}` : P.size && P.size !== 'custom' ? `, 기준 사이즈 ${presetLabel(P.size)}` : '';
       if (S.brand.on && (S.brand.ko || S.brand.en)) blocks.push({ t: 'brand' });
       blocks.push({ t: 'title', s: P.name || '도안' });
       blocks.push({ t: 'sub', s: `${C.isCard ? '가디건' : '풀오버'}, ${C.isV ? 'V넥' : '라운드넥'}, ${C.isDrop ? '드롭숄더' : '셋인 슬리브'}${sizeTxt}${FITS[P.fit] ? `, ${FITS[P.fit].name}` : ''}` });
       blocks.push({ t: 'sub', s: `디자인 ${S.worker || '-'}, ${new Date().toLocaleDateString('ko-KR')}` });
-      const fr = [['가슴둘레', fv('chest') + 'cm'], ['총장', fv('length') + 'cm'], ['밑단둘레', fv('hem') + 'cm'], ['어깨너비', fv('shoulder') + 'cm'], ['진동깊이', fv('armDepth') + 'cm'], ['목너비', fv('neckW') + 'cm'], ['소매길이', fv('sleeveLen') + 'cm'], ['소매통', fv('upper') + 'cm']];
-      if (G) blocks.push({ t: 'table', rows: fr }); else blocks.push({ t: 'table', rows: [['가슴둘레', fv('chest') + 'cm', '총장', fv('length') + 'cm'], ['밑단둘레', fv('hem') + 'cm', '어깨너비', fv('shoulder') + 'cm'], ['진동깊이', fv('armDepth') + 'cm', '목너비', fv('neckW') + 'cm'], ['소매길이', fv('sleeveLen') + 'cm', '소매통', fv('upper') + 'cm']] });
+      const fr = [['가슴둘레', fv('chest')], ['총장', fv('length')], ['밑단둘레', fv('hem')], ['어깨너비', fv('shoulder')], ['진동깊이', fv('armDepth')], ['목너비', fv('neckW')], ['소매길이', fv('sleeveLen')], ['소매통', fv('upper')]];
+      if (G) blocks.push({ t: 'table', rows: fr }); else blocks.push({ t: 'table', rows: [['가슴둘레', fv('chest'), '총장', fv('length')], ['밑단둘레', fv('hem'), '어깨너비', fv('shoulder')], ['진동깊이', fv('armDepth'), '목너비', fv('neckW')], ['소매길이', fv('sleeveLen'), '소매통', fv('upper')]] });
       blocks.push({ t: 'legend' });
     }
     if (o.text) (G ? G.T : S.T).forEach(b => { if (o.cover && (b.t === 'h1' || b.sec === 'fin')) return; blocks.push(b); });
@@ -1425,7 +1563,7 @@ function buildPages(C) {
     const pagesG = [];
     const header = yy => D => {
       D.fillRect(X0, yy, X1 - X0, lh, '#1C1917');
-      res.forEach((x, i) => D.text(X0 + colW0 + colW * i + colW / 2, yy + lh / 2, presetLabel(x.k) + (x.k.startsWith('m') ? ' (남)' : x.k.startsWith('k') ? ' (아동)' : ''), 12, '#FFFFFF', 'center', 700));
+      res.forEach((x, i) => D.text(X0 + colW0 + colW * i + colW / 2, yy + lh / 2, presetLabel(x.k), 12, '#FFFFFF', 'center', 700));
     };
     items.push(header(y)); y += lh;
     rows.forEach(r => {
@@ -1468,7 +1606,10 @@ function buildPages(C) {
   }
   if (o.charts) {
     const cw = o.cell * 4, ratio = o.ratio;
-    C.pieces.forEach(pc => {
+    // 그레이딩 사이즈가 있으면 사이즈마다 차트 (출력 탭에서 끌 수 있음)
+    const cs = o.chartAll !== false ? chartSizes() : [];
+    const sets = cs.length ? cs.map(k => ({ C: k === P.size ? S.C : (gradingResults().find(y => y.k === k) || {}).C, tag: presetLabel(k) + ' 사이즈 ' })).filter(x => x.C) : [{ C, tag: '' }];
+    sets.forEach(({ C, tag }) => C.pieces.forEach(pc => {
       const ch = ratio ? cw * C.gs / C.gr : cw;
       const G0 = chartGeom(pc, { cw, ch, title: 'x' });
       const availW = X1 - X0 - G0.mL - G0.mR, availH = Y1 - Y0 - G0.mT - G0.mB - 10;
@@ -1484,10 +1625,10 @@ function buildPages(C) {
         }
       }
       tiles.forEach((t, i) => {
-        const title = `${pc.name} 차트 ${i + 1}/${tiles.length}: ${pc.W - t.c1}~${pc.W - t.c0}코, ${t.r0}~${t.r1}단`;
+        const title = `${tag}${pc.name} 차트 ${i + 1}/${tiles.length}: ${pc.W - t.c1}~${pc.W - t.c0}코, ${t.r0}~${t.r1}단`;
         pages.push(D => { const sub = new D.constructor(D.c, D.ox + X0 * D.s, D.oy + Y0 * D.s, D.s); drawChart(sub, pc, { cw, ch, r0: t.r0, r1: t.r1, c0: t.c0, c1: t.c1, showKnit: S.chart.showKnit, tint: S.chart.tint, center: S.chart.center, title }); });
       });
-    });
+    }));
   }
   return pages;
 }

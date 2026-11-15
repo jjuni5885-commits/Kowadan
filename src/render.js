@@ -96,6 +96,9 @@ function drawSym(D, code, x, y, cw, ch, opt) {
       D.line(cx, y + ch * 0.85, cx, y + ch * 0.15, sw, INK); break;
     case 'mb': D.circle(cx, cy, m * 0.3, null, INK, sw); D.circle(cx, cy, m * 0.13, INK); break;
     case 'bo': D.circle(cx, cy, m * 0.22, INK); break;
+    case 'co': D.line(x + cw * 0.22, y + ch * 0.72, x + cw * 0.78, y + ch * 0.72, sw, INK); D.line(x + cw * 0.22, y + ch * 0.72, x + cw * 0.22, y + ch * 0.32, sw, INK); D.line(x + cw * 0.78, y + ch * 0.72, x + cw * 0.78, y + ch * 0.32, sw, INK); break;
+    case 'ds': D.line(cx - cw * 0.12, y + ch * 0.22, cx - cw * 0.12, y + ch * 0.78, sw * 1.3, INK); D.line(cx + cw * 0.12, y + ch * 0.22, cx + cw * 0.12, y + ch * 0.78, sw * 1.3, INK); D.line(cx - cw * 0.26, y + ch * 0.22, cx + cw * 0.26, y + ch * 0.22, sw, INK); break;
+    case 'pu': D.poly([[x + cw * 0.25, y + ch * 0.7], [cx, y + ch * 0.3], [x + cw * 0.75, y + ch * 0.7]], null, INK, sw, false); D.circle(cx, y + ch * 0.74, m * 0.08, INK); break;
     case 'sr': D.poly([[cx, y + ch * 0.2], [x + cw * 0.8, y + ch * 0.78], [x + cw * 0.2, y + ch * 0.78]], null, INK, sw); break;
     case 'm1r': D.line(cx - cw * 0.08, y + ch * 0.85, cx - cw * 0.08, y + ch * 0.18, sw, INK); D.line(cx - cw * 0.08, y + ch * 0.55, cx + cw * 0.26, y + ch * 0.2, sw, INK); break;
     case 'm1l': D.line(cx + cw * 0.08, y + ch * 0.85, cx + cw * 0.08, y + ch * 0.18, sw, INK); D.line(cx + cw * 0.08, y + ch * 0.55, cx - cw * 0.26, y + ch * 0.2, sw, INK); break;
@@ -218,10 +221,11 @@ function drawChart(D, pc, opt, G) {
     if (!ex(r - 1, c)) D.line(x, y + ch, x + cw, y + ch, osw, INK, 'square');
   }
   // 고무단 경계
-  if (pc.ribRows && pc.ribRows >= r0 && pc.ribRows < r1) {
-    const y = Y(pc.ribRows);
+  const rb = pc.ribEnd ? pc.total - pc.ribRows : pc.ribRows;
+  if (pc.ribRows && rb >= r0 && rb < r1) {
+    const y = Y(rb);
     let lo = Infinity, hi = -Infinity;
-    for (let c = c0; c <= c1; c++) if (ex(pc.ribRows, c)) { lo = Math.min(lo, c); hi = Math.max(hi, c); }
+    for (let c = c0; c <= c1; c++) if (ex(rb, c)) { lo = Math.min(lo, c); hi = Math.max(hi, c); }
     if (lo <= hi) D.line(X(lo) - cw * 0.6, y, X(hi + 1) + cw * 0.6, y, Math.max(1.2, cw * 0.14), RIBLINE);
   }
   // 7. 번호
@@ -229,7 +233,7 @@ function drawChart(D, pc, opt, G) {
   for (let r = r0; r <= r1; r++) {
     if (r % step !== 0 && r !== r0 && r % 10 !== 0) continue;
     const y = Y(r) + ch / 2, bold = r % 10 === 0 ? 700 : 400;
-    if (r % 2 === 1) { // 겉면: 오른쪽
+    if (r % 2 === 1 || (pc.roundFrom && r >= pc.roundFrom)) { // 겉면, 원형: 오른쪽
       let hi = -1; for (let c = c1; c >= c0; c--) if (ex(r, c)) { hi = c; break; }
       const xr = hi >= 0 ? X(hi + 1) : X(c1 + 1);
       D.text(Math.max(xr, X(c1 + 1)) + fs * 0.4, y, r, fs * 0.9, INK, 'left', bold);
@@ -263,7 +267,7 @@ function motifPiece(m) {
 function usedSymbols(pieces) {
   const set = new Set();
   pieces.forEach(pc => pc.codes.forEach(row => row && row.forEach(v => { if (v && v !== '>') set.add(v); })));
-  const order = ['k', 'p', 'tk', 'yo', 'k2tog', 'ssk', 'sk2p', 'mb', 'm1r', 'm1l', 'bo', 'sr'];
+  const order = ['k', 'p', 'tk', 'yo', 'k2tog', 'ssk', 'sk2p', 'mb', 'm1r', 'm1l', 'co', 'pu', 'ds', 'bo', 'sr'];
   const list = order.filter(k => set.has(k));
   [...set].filter(k => parseTok(k)).sort().forEach(k => list.push(k));
   if (!list.includes('k')) list.unshift('k');
@@ -288,7 +292,8 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs, mini) {
   fs = fs || 11;
   const ph = (pc.total / gr) * scale, pw = (pc.W / gs) * scale;
   const base = by + ph;
-  const sx = c => bx + (c / gs) * scale, sy = r => base - (r / gr) * scale;
+  // 탑다운 조각은 1단이 위(목 쪽)
+  const sx = c => bx + (c / gs) * scale, sy = pc.td ? (r => by + (r / gr) * scale) : (r => base - (r / gr) * scale);
   const lw = Math.max(0.8, fs * 0.09);
   const dimH = (xa, xb, y, label, above) => {
     D.line(xa, y, xb, y, lw * 0.8, RIBLINE); D.line(xa, y - fs * 0.35, xa, y + fs * 0.35, lw * 0.8, RIBLINE); D.line(xb, y - fs * 0.35, xb, y + fs * 0.35, lw * 0.8, RIBLINE);
@@ -298,8 +303,9 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs, mini) {
     D.line(x, ya, x, yb, lw * 0.8, RIBLINE); D.line(x - fs * 0.35, ya, x + fs * 0.35, ya, lw * 0.8, RIBLINE); D.line(x - fs * 0.35, yb, x + fs * 0.35, yb, lw * 0.8, RIBLINE);
     D.text(x + (side === 'left' ? -fs * 0.5 : fs * 0.5), (ya + yb) / 2, label, fs, INK, side === 'left' ? 'right' : 'left', 500);
   };
-  D.text(bx + pw / 2, by - fs * (mini ? 1.3 : 5.2), pc.name, fs * (mini ? 1.15 : 1.25), INK, 'center', 700);
-  for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => D.fillRect(sx(s.l), sy(r), ((s.r - s.l + 1) / gs) * scale + 0.3, scale / gr + 0.3, r <= pc.ribRows ? '#EAE4DC' : '#FAF7F2'));
+  if (!mini || pw + fs * 2.2 >= pc.name.length * fs * 1.05) D.text(bx + pw / 2, by - fs * (mini ? 1.3 : 5.2), mini ? pc.name.replace(/ \(2장\)/, '') : pc.name, fs * (mini ? 1.15 : 1.25), INK, 'center', 700);
+  const ribR = r => pc.ribEnd ? r > pc.total - pc.ribRows : r <= pc.ribRows;
+  for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => D.fillRect(sx(s.l), pc.td ? sy(r - 1) : sy(r), ((s.r - s.l + 1) / gs) * scale + 0.3, scale / gr + 0.3, ribR(r) ? '#EAE4DC' : '#FAF7F2'));
   const ex = (r, c) => pc.codes[r] && pc.codes[r][c] !== null && pc.codes[r][c] !== undefined;
   for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => {
     if (!ex(r, s.l - 1)) D.line(sx(s.l), sy(r), sx(s.l), sy(r - 1), lw * 1.4, INK, 'square');
@@ -311,6 +317,18 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs, mini) {
   });
   D.flush();
   if (mini) return { w: pw, h: ph };
+  if (pc.td) { // 탑다운: 첫 단, 마지막 단 폭과 길이
+    const live = r => { const s = pc.rows[r] || []; return s.length ? [s[0].l, s[s.length - 1].r + 1, s.reduce((a, x) => a + x.r - x.l + 1, 0)] : null; };
+    const a = live(1), b = live(pc.total);
+    let wide = 1, wn = 0; for (let r = 1; r <= pc.total; r++) { const l = live(r); if (l && l[2] > wn) { wn = l[2]; wide = r; } }
+    const w = live(wide);
+    if (a) dimH(sx(a[0]), sx(a[1]), by - fs * 1.2, `${a[2]}코 (${fmt(a[2] / gs)}cm)`, true);
+    if (b && pc.total > 1) dimH(sx(b[0]), sx(b[1]), by + ph + fs * 1.3, `${b[2]}코 (${fmt(b[2] / gs)}cm)`);
+    if (w && b && w[2] > b[2] && wide !== 1) dimH(sx(w[0]), sx(w[1]), sy(wide) + fs * 1.1, `${w[2]}코`);
+    dimV(bx - fs * 1.4, by, by + ph, `${fmt(pc.total / gr)}cm (${pc.total}단)`, 'left');
+    D.flush();
+    return { w: pw, h: ph };
+  }
   const f = C.finished, info = pc.info, lay = pc.lay;
   const cmOf = n => cmFor(n, lay, gs, C.dens);
   const row1 = pc.rows[1][0], row1r = pc.rows[1][pc.rows[1].length - 1];
@@ -348,7 +366,7 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs, mini) {
   D.flush();
   return { w: pw, h: ph };
 }
-function schemPieces(C) { return C.pieces.filter(p => p.kind !== 'lfront'); }
+function schemPieces(C) { return C.pieces.filter(p => !['lfront', 'ylfront', 'blfront'].includes(p.kind)); }
 function schematicDims(C, availW, mini) {
   const fs = 11, padL = fs * (mini ? 1.2 : 8.4), padR = fs * (mini ? 1.2 : 10), padT = fs * (mini ? 2.4 : 6.8), padB = fs * (mini ? 0.6 : 3.4);
   const list = schemPieces(C);
