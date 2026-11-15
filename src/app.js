@@ -32,6 +32,7 @@ function defaultProject() {
     progress: { back: 1, front: 1, rfront: 1, lfront: 1, sleeve: 1 },
     textDone: [],
     grading: [],
+    textGraded: false,
     memo: '',
   };
 }
@@ -899,6 +900,13 @@ function gradingHTML() {
     </tbody></table></div>
     ${res.some(x => x.C && x.C.warnings.length) ? `<div class="alert"><b>확인이 필요한 사이즈</b><ul>${res.filter(x => x.C && x.C.warnings.length).map(x => `<li>${presetLabel(x.k)}: ${esc(x.C.warnings.join(' '))}</li>`).join('')}</ul></div>` : ''}` : '<p class="desc">사이즈를 두 개 이상 고르면 표가 나옵니다.</p>'}`;
 }
+function gradedOn() { return !!S.P.textGraded && gradeSizes().length >= 2; }
+function gradedText() {
+  const list = [];
+  gradingResults().forEach(x => { if (x.C) { const P2 = JSON.parse(JSON.stringify(S.P)); const p = PRESETS[x.k]; Object.keys(P2.body).forEach(f => { if (p[f] !== undefined) P2.body[f] = p[f]; }); P2.design.length = p.length; list.push({ label: presetLabel(x.k), T: buildText(P2, x.C), C: x.C }); } });
+  return { T: mergeTexts(list), list };
+}
+function curText() { return gradedOn() ? gradedText().T : S.T; }
 function bindGrading() {
   document.querySelectorAll('[data-grade]').forEach(el => el.onclick = () => {
     const k = el.dataset.grade, cur = new Set(S.P.grading || []);
@@ -1041,15 +1049,21 @@ function textPlain(T) { return T.map(b => b.t === 'h1' ? `${b.s}\n` : b.t === 'h
 function viewText() {
   if (!S.C) return warnBox();
   const n = (S.P.textDone || []).length;
+  const gs = gradeSizes(), on = gradedOn();
+  const gbar = gs.length >= 2
+    ? `<label class="chk"><input type="checkbox" id="tgrade" ${on ? 'checked' : ''}><span>사이즈 병기 ${esc(presetLabel(gs[0]))}(${esc(gs.slice(1).map(presetLabel).join(', '))})</span></label>`
+    : `<span class="desc small">도식화 탭의 사이즈 그레이딩 표에서 사이즈를 2개 이상 고르면 사이즈 병기 도안(예: 108(112, 116)코)을 만들 수 있습니다.</span>`;
   return `<div data-live="warn"></div><section class="card doc">
-    <div class="hrow"><p class="desc small">문단을 누르면 완료 표시가 됩니다. 뜨면서 한 단계씩 체크하세요. (완료 ${n}개)</p>
-    <div class="row"><button class="btn sm" id="treset">체크 모두 지우기</button><button class="btn sm" id="tcopy">글 전체 복사</button></div></div>
-    ${textHTML(S.T, true)}</section>`;
+    <div class="hrow"><p class="desc small">${on ? '판매용 사이즈 병기 도안입니다. 완료 체크는 한 사이즈 도안에서만 씁니다.' : `문단을 누르면 완료 표시가 됩니다. 뜨면서 한 단계씩 체크하세요. (완료 ${n}개)`}</p>
+    <div class="row">${on ? '' : '<button class="btn sm" id="treset">체크 모두 지우기</button>'}<button class="btn sm" id="tcopy">글 전체 복사</button></div></div>
+    <div class="row wrap">${gbar}</div>
+    ${on ? textHTML(gradedText().T, false) : textHTML(S.T, true)}</section>`;
 }
 function bindText() {
   const b = $('#tcopy'); if (!b) return;
-  b.onclick = async () => { try { await navigator.clipboard.writeText(textPlain(S.T)); toast('복사했습니다.'); } catch (e) { toast('복사가 막혀 있습니다. 글을 길게 눌러 선택해 주세요.'); } };
-  $('#treset').onclick = () => { S.P.textDone = []; touchQuiet(); renderTab(); };
+  b.onclick = async () => { try { await navigator.clipboard.writeText(textPlain(curText())); toast('복사했습니다.'); } catch (e) { toast('복사가 막혀 있습니다. 글을 길게 눌러 선택해 주세요.'); } };
+  const tg = $('#tgrade'); if (tg) tg.onchange = () => { S.P.textGraded = tg.checked; touchQuiet(); renderTab(); };
+  const tr = $('#treset'); if (tr) tr.onclick = () => { S.P.textDone = []; touchQuiet(); renderTab(); };
   document.querySelectorAll('[data-ti]').forEach(el => el.onclick = () => {
     const i = +el.dataset.ti; const set = new Set(S.P.textDone || []);
     set.has(i) ? set.delete(i) : set.add(i);
@@ -1074,6 +1088,7 @@ function viewPrint() {
     <div class="row wrap">
       ${[['cover', '표지와 재료'], ['schem', '도식화'], ['grade', '사이즈 그레이딩 표'], ['text', '서술형 도안'], ['motifs', '무늬 차트'], ['charts', '조각 차트'], ['ratio', '게이지 비율 칸']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-pr="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
     </div>
+    ${gradeSizes().length >= 2 ? `<div class="row wrap"><label class="chk"><input type="checkbox" id="pgraded" ${gradedOn() ? 'checked' : ''}><span>표지와 서술형 도안에 사이즈 병기 (${esc(gradeSizes().map(presetLabel).join(', '))})</span></label></div>` : ''}
     <div class="row wrap"><button class="btn pri big" id="mkpdf" ${C ? '' : 'disabled'}>PDF 저장</button>${IN_CLAUDE ? '' : `<button class="btn big" id="prpdf" ${C ? '' : 'disabled'}>PDF 열어서 인쇄</button>`}<span id="pdfst" class="desc"></span></div>
   </section>
   <section class="card">
@@ -1110,6 +1125,7 @@ function usedCustomMotifs(P) {
 function bindPrint() {
   $('#pcell').onchange = e => { S.print.cell = +e.target.value; LS.set('print', S.print); };
   document.querySelectorAll('[data-pr]').forEach(el => el.onchange = () => { S.print[el.dataset.pr] = el.checked; LS.set('print', S.print); });
+  const pg = $('#pgraded'); if (pg) pg.onchange = () => { S.P.textGraded = pg.checked; touchQuiet(); };
   $('#mkpdf').onclick = () => makePDF(false);
   const pr = $('#prpdf'); if (pr) pr.onclick = () => makePDF(true);
   $('#exone').onclick = () => {
@@ -1207,15 +1223,18 @@ function buildPages(C) {
   const X0 = PG.M, X1 = PG.W - PG.M, Y0 = PG.M, Y1 = PG.H - PG.M - 20;
   if (o.cover || o.text) {
     const blocks = [];
-    const f = C.finished;
+    const G = gradedOn() ? gradedText() : null;
+    const fv = k => G ? mergeVals(G.list.map(x => fmt(x.C.finished[k])), G.list.map(x => x.label)) : fmt(C.finished[k]);
     if (o.cover) {
+      const sizeTxt = G ? `, 사이즈 ${G.list[0].label}(${G.list.slice(1).map(x => x.label).join(', ')})` : P.size && P.size !== 'custom' ? `, 기준 사이즈 ${presetLabel(P.size)}` : '';
       blocks.push({ t: 'title', s: P.name || '도안' });
-      blocks.push({ t: 'sub', s: `${C.isCard ? '가디건' : '풀오버'}, ${C.isV ? 'V넥' : '라운드넥'}, ${C.isDrop ? '드롭숄더' : '셋인 슬리브'}${P.size && P.size !== 'custom' ? `, 기준 사이즈 ${presetLabel(P.size)}` : ''}${FITS[P.fit] ? `, ${FITS[P.fit].name}` : ''}` });
+      blocks.push({ t: 'sub', s: `${C.isCard ? '가디건' : '풀오버'}, ${C.isV ? 'V넥' : '라운드넥'}, ${C.isDrop ? '드롭숄더' : '셋인 슬리브'}${sizeTxt}${FITS[P.fit] ? `, ${FITS[P.fit].name}` : ''}` });
       blocks.push({ t: 'sub', s: `디자인 ${S.worker || '-'}, ${new Date().toLocaleDateString('ko-KR')}` });
-      blocks.push({ t: 'table', rows: [['가슴둘레', fmt(f.chest) + 'cm', '총장', fmt(f.length) + 'cm'], ['밑단둘레', fmt(f.hem) + 'cm', '어깨너비', fmt(f.shoulder) + 'cm'], ['진동깊이', fmt(f.armDepth) + 'cm', '목너비', fmt(f.neckW) + 'cm'], ['소매길이', fmt(f.sleeveLen) + 'cm', '소매통', fmt(f.upper) + 'cm']] });
+      const fr = [['가슴둘레', fv('chest') + 'cm'], ['총장', fv('length') + 'cm'], ['밑단둘레', fv('hem') + 'cm'], ['어깨너비', fv('shoulder') + 'cm'], ['진동깊이', fv('armDepth') + 'cm'], ['목너비', fv('neckW') + 'cm'], ['소매길이', fv('sleeveLen') + 'cm'], ['소매통', fv('upper') + 'cm']];
+      if (G) blocks.push({ t: 'table', rows: fr }); else blocks.push({ t: 'table', rows: [['가슴둘레', fv('chest') + 'cm', '총장', fv('length') + 'cm'], ['밑단둘레', fv('hem') + 'cm', '어깨너비', fv('shoulder') + 'cm'], ['진동깊이', fv('armDepth') + 'cm', '목너비', fv('neckW') + 'cm'], ['소매길이', fv('sleeveLen') + 'cm', '소매통', fv('upper') + 'cm']] });
       blocks.push({ t: 'legend' });
     }
-    if (o.text) S.T.forEach(b => { if (o.cover && (b.t === 'h1' || b.sec === 'fin')) return; blocks.push(b); });
+    if (o.text) (G ? G.T : S.T).forEach(b => { if (o.cover && (b.t === 'h1' || b.sec === 'fin')) return; blocks.push(b); });
     let page = [], y = Y0;
     const flush = () => { const items = page; pages.push((D, ctx, px) => items.forEach(fn => fn(D, ctx, px))); page = []; y = Y0; };
     const tmp = document.createElement('canvas').getContext('2d'); const px = 1240 / PG.W;
@@ -1224,7 +1243,7 @@ function buildPages(C) {
         const h = b.rows.length * 34 + 10;
         if (y + h > Y1) flush();
         const y0 = y;
-        page.push(D => { b.rows.forEach((r, i) => { const yy = y0 + i * 34; D.fillRect(X0, yy, X1 - X0, 32, i % 2 ? '#FBF9F6' : '#F3EFEA'); const cw = (X1 - X0) / 4; r.forEach((c, j) => D.text(X0 + cw * j + 12, yy + 16, c, 13, INK, 'left', j % 2 ? 400 : 700)); }); });
+        page.push(D => { b.rows.forEach((r, i) => { const yy = y0 + i * 34; D.fillRect(X0, yy, X1 - X0, 32, i % 2 ? '#FBF9F6' : '#F3EFEA'); const cw = (X1 - X0) / (r.length === 2 ? 5 : 4); r.forEach((c, j) => D.text(X0 + cw * j + 12, yy + 16, c, 13, INK, 'left', j % 2 ? 400 : 700)); }); });
         y += h + 10; return;
       }
       if (b.t === 'legend') {

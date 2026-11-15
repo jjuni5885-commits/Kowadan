@@ -877,4 +877,64 @@ function buildText(P, C) {
   return out;
 }
 
-if (typeof module !== 'undefined') module.exports = { compute, buildText, BUILTIN_MOTIFS, expandMotif, motifCheck, parseTok, symName, crossHow, STITCH, notation, mirrorMotif, motifRowsText, tokW, fmt };
+/* ===================== 사이즈 병기 ===================== */
+// 여러 사이즈의 서술형 도안을 하나로 합침: 108(112, 116)코
+const NOT_RE = /\d+-\d+-\d+(?:, \d+-\d+-\d+)*/y, NUM_RE = /\d+(?:\.\d+)?/y;
+function splitNums(s) {
+  const parts = []; let buf = '', i = 0;
+  while (i < s.length) {
+    NOT_RE.lastIndex = i; let m = NOT_RE.exec(s);
+    if (m && !/[\d.]/.test(s[i - 1] || '')) { parts.push(buf, { k: 'n', v: m[0] }); buf = ''; i += m[0].length; continue; }
+    NUM_RE.lastIndex = i; m = /[\d]/.test(s[i]) && !/[\d.]/.test(s[i - 1] || '') ? NUM_RE.exec(s) : null;
+    if (m) { parts.push(buf, { k: 'v', v: m[0] }); buf = ''; i += m[0].length; continue; }
+    buf += s[i++];
+  }
+  parts.push(buf);
+  return parts;
+}
+function skelOf(b) { return b.t + '\u0000' + (b.s == null ? '' : splitNums(b.s).map(x => typeof x === 'string' ? x : x.k === 'n' ? '\u0002' : '\u0001').join('')); }
+function mergeVals(vals, labels) {
+  if (vals.every(v => v === vals[0])) return vals[0];
+  if (vals.some(v => v.includes(','))) {
+    const g = [];
+    vals.forEach((v, i) => { const x = g.find(y => y.v === v); x ? x.l.push(labels[i]) : g.push({ v, l: [labels[i]] }); });
+    return '[' + g.map(x => `${x.l.join(', ')}: ${x.v}`).join(' / ') + ']';
+  }
+  return `${vals[0]}(${vals.slice(1).join(', ')})`;
+}
+function mergeTexts(list) {
+  // list: [{label, T}] 작은 사이즈부터
+  if (!list.length) return [];
+  if (list.length === 1) return list[0].T;
+  const N = list.length;
+  let M = list[0].T.map(b => ({ b, sk: skelOf(b), v: [splitNums(b.s || '')], at: [0] }));
+  for (let k = 1; k < N; k++) {
+    const B = list[k].T, bs = B.map(skelOf);
+    const n = M.length, m = B.length;
+    const L = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = M[i].sk === bs[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    const out = []; let i = 0, j = 0;
+    while (i < n || j < m) {
+      if (i < n && j < m && M[i].sk === bs[j]) { M[i].v.push(splitNums(B[j].s || '')); M[i].at.push(k); out.push(M[i]); i++; j++; }
+      else if (j < m && (i === n || L[i][j + 1] >= L[i + 1][j])) { out.push({ b: B[j], sk: bs[j], v: [splitNums(B[j].s || '')], at: [k] }); j++; }
+      else { out.push(M[i]); i++; }
+    }
+    M = out;
+  }
+  const labels = list.map(x => x.label);
+  const res = [];
+  const head = list[0].T.findIndex(b => b.t === 'h1');
+  M.forEach((e, idx) => {
+    const lb = e.at.map(k => labels[k]);
+    let s = e.b.s;
+    if (s != null) {
+      s = e.v[0].map((x, pi) => typeof x === 'string' ? x : mergeVals(e.v.map(v => v[pi].v), lb)).join('');
+      if (e.at.length < N) s = `(${lb.join(', ')} 사이즈) ` + s;
+    }
+    res.push({ ...e.b, s });
+    if (idx === head) res.push({ t: 'p', s: `사이즈: ${labels[0]}(${labels.slice(1).join(', ')}). 괄호 안 숫자는 차례로 ${labels.slice(1).join(', ')} 사이즈이며, 숫자가 하나뿐이면 모든 사이즈 공통입니다. 단-코-회가 여러 구간이면 [사이즈: 표기]로 나누어 적었습니다.`, sec: 'size' });
+  });
+  return res;
+}
+
+if (typeof module !== 'undefined') module.exports = { mergeTexts, mergeVals, compute, buildText, BUILTIN_MOTIFS, expandMotif, motifCheck, parseTok, symName, crossHow, STITCH, notation, mirrorMotif, motifRowsText, tokW, fmt };
