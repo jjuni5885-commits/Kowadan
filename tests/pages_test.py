@@ -12,7 +12,7 @@ async def main():
         pg.on('pageerror', lambda e: errs.append(str(e)))
         js = (ROOT / 'node_modules/jspdf/dist/jspdf.umd.min.js').read_text()
         await pg.route('https://cdnjs.cloudflare.com/**', lambda r: r.fulfill(status=200, content_type='application/javascript', body=js))
-        await pg.goto((ROOT / 'docs/index.html').as_uri()); await pg.wait_for_timeout(1200)
+        await pg.goto((ROOT / 'index.html').as_uri()); await pg.wait_for_timeout(1200)
         await pg.click('button[data-tab="print"]'); await pg.wait_for_timeout(300)
         async with pg.expect_download(timeout=120000) as d:
             await pg.click('#mkpdf')

@@ -9,7 +9,7 @@ async def main():
         errs=[]
         pg.on('console', lambda m: errs.append(m.type+': '+m.text) if m.type in ('error','warning') else None)
         pg.on('pageerror', lambda e: errs.append('PAGEERR '+str(e)))
-        await pg.goto((Path(__file__).resolve().parent.parent/'docs/index.html').as_uri())
+        await pg.goto((Path(__file__).resolve().parent.parent/'index.html').as_uri())
         await pg.wait_for_timeout(1500)
         tabs = sys.argv[2].split(',') if len(sys.argv)>2 else ['size','design','motif','chart','schem','text','print','proj']
         for t in tabs:
