@@ -227,8 +227,8 @@ function warnBox() {
 }
 function num(path, label, unit, opt = {}) {
   const v = getPath(S.P, path);
-  return `<label class="fld${opt.wide ? ' wide' : ''}"><span class="lb">${label}${opt.help ? `<i class="hp">${opt.help}</i>` : ''}</span>
-    <span class="iw"><input type="number" inputmode="decimal" step="${opt.step || 0.5}" data-path="${path}" data-num="1" value="${v ?? ''}">${unit ? `<em>${unit}</em>` : ''}</span></label>`;
+  return `<label class="fld${opt.wide ? ' wide' : ''}"><span class="lb">${label}</span>
+    <span class="iw"><input type="number" inputmode="decimal" step="${opt.step || 0.5}" data-path="${path}" data-num="1" value="${v ?? ''}">${unit ? `<em>${unit}</em>` : ''}</span>${opt.help ? `<i class="hp">${opt.help}</i>` : ''}</label>`;
 }
 function txt(path, label, opt = {}) {
   return `<label class="fld${opt.wide ? ' wide' : ''}"><span class="lb">${label}</span><span class="iw"><input type="text" data-path="${path}" value="${esc(getPath(S.P, path))}" placeholder="${opt.ph || ''}"></span></label>`;
@@ -289,7 +289,7 @@ function inspectorHTML() {
   if (!C) return warnBox();
   const f = C.finished, y = yarnInfo(C);
   return `${warnBox()}
-  <div class="icard"><h3>도식화 미리보기</h3><div class="mini">${schematicSVG(C, 360)}</div></div>
+  <div class="icard"><h3>도식화 미리보기</h3><div class="mini">${schematicSVG(C, 360, true)}</div><p class="desc small">치수는 도식화 탭에서 봅니다.</p></div>
   <div class="icard"><h3>설계 요약</h3>
     <table class="kv"><tbody>
       <tr><th>완성 가슴둘레</th><td>${fmt(f.chest)}cm</td></tr>
@@ -449,7 +449,7 @@ function bindSize() {
 /* ===================== 탭: 디자인 ===================== */
 function motifOptions(withNone) {
   const ms = allMotifs();
-  return [...(withNone ? [['', '없음']] : []), ...ms.map(m => [m.id, `${m.custom ? '[내 무늬] ' : ''}${m.name} (${expandMotif(m).w}코)`])];
+  return [...(withNone ? [['', '없음']] : []), ...ms.map(m => { const w = expandMotif(m).w; return [m.id, `${m.custom ? '[내 무늬] ' : ''}${m.name}${m.name.includes(w + '코') ? '' : ` (${w}코)`}`]; })];
 }
 function viewDesign() {
   const P = S.P;
@@ -515,7 +515,7 @@ function viewMotif() {
     <p class="desc">기본 무늬는 복제해서 고칠 수 있습니다. 직접 만든 무늬는 ${Store.db ? '공유 저장소에 저장됩니다' : '이 브라우저에 저장됩니다'}.</p>
     <div class="mgrid">${ms.map(m => {
       const ex = expandMotif(m);
-      const cs = Math.max(8, Math.min(14, Math.floor(150 / Math.max(ex.w, 6))));
+      const cs = Math.max(10, Math.min(20, Math.floor(170 / Math.max(ex.w, 6))));
       return `<div class="mcard"><div class="mhead"><b>${esc(m.name)}</b><span>${ex.w}코 ${ex.h}단${m.custom ? ', 내 무늬' : ''}</span></div>
       <div class="mimg">${chartSVG(motifPiece(m), { cw: cs, ch: cs, showKnit: true })}</div>
       <div class="row"><button class="btn" data-medit="${m.id}">${m.custom ? '편집' : '복제하여 편집'}</button>${m.custom ? `<button class="btn ghost" data-mdel="${m.id}">삭제</button>` : ''}</div></div>`;
@@ -697,6 +697,7 @@ function viewChart() {
   <div data-live="warn"></div>
   <section class="card chartcard">
     <div class="chips">${C.pieces.map(p => `<span class="chip ${p.id === pc.id ? 'on' : ''}" data-piece="${p.id}">${esc(p.name)}</span>`).join('')}</div>
+    <details class="copts" ${S.chartOpts ?? window.innerWidth > 640 ? 'open' : ''}><summary>보기 옵션과 저장</summary>
     <div class="row wrap ctl">
       <label class="zoom">크기 <input type="range" min="4" max="28" value="${o.cell}" id="zoom"></label>
       ${[['showKnit', '겉뜨기 기호'], ['tint', '무늬 색'], ['center', '중심선'], ['ratio', '게이지 비율 칸'], ['dim', '완료한 아래 단 어둡게']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-c="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
@@ -704,10 +705,10 @@ function viewChart() {
     <div class="row wrap ctl">
       <button class="btn sm" id="cfit">가로 폭 맞춤</button><button class="btn sm" id="cgo">현재 단으로 스크롤</button>
       <button class="btn sm" id="cpng">차트 PNG 저장</button><button class="btn sm" id="csvg">차트 SVG 저장</button>
-    </div>
+    </div></details>
     <div class="rowbar" id="rowbar"></div>
     <div class="chartbox" id="chartbox"></div>
-    <p class="desc small">차트를 누르면 그 단으로 이동합니다. 마우스로 끌면 차트가 움직이고, 키보드 위아래 화살표로 한 단씩 옮길 수 있습니다.</p>
+    <p class="desc small">차트를 누르면 그 단으로 이동합니다. 끌면 차트가 움직이고, 키보드에서는 위아래 화살표로 한 단씩 옮깁니다.</p>
   </section>
   <section class="card">
     <h2>기호</h2>
@@ -781,6 +782,7 @@ function setRow(r, ensureVisible) {
   }
 }
 function bindChart() {
+  const co = document.querySelector('.copts'); if (co) co.ontoggle = () => { S.chartOpts = co.open; };
   document.querySelectorAll('[data-piece]').forEach(el => el.onclick = () => { S.piece = el.dataset.piece; renderTab(); });
   $('#zoom').oninput = e => { S.chart.cell = +e.target.value; LS.set('chart', S.chart); renderChartBox(); };
   document.querySelectorAll('[data-c]').forEach(el => el.onchange = () => { S.chart[el.dataset.c] = el.checked; LS.set('chart', S.chart); renderChartBox(); });
@@ -793,6 +795,7 @@ function bindChart() {
   $('#cgo').onclick = () => scrollToRow(false);
   $('#csvg').onclick = () => { const pc = curPiece(); saveFile(`${safeName(S.P.name)}_${safeName(pc.name)}_차트.svg`, '<?xml version="1.0" encoding="UTF-8"?>\n' + chartSVG(pc, { ...chartOpts(pc), hlRow: null })); };
   $('#cpng').onclick = async () => {
+    await ensureFonts();
     const pc = curPiece(); const opts = { ...chartOpts(pc), hlRow: null };
     const G = chartGeom(pc, opts);
     const sc = Math.min(3, 4000 / Math.max(G.width, G.height));
@@ -1022,7 +1025,8 @@ function bindSchem() {
   bindGrading();
   const aw = Math.min(window.innerWidth, 1180) - 70;
   $('#ssvg').onclick = () => saveFile(`${safeName(S.P.name)}_도식화.svg`, '<?xml version="1.0" encoding="UTF-8"?>\n' + schematicSVG(C, aw));
-  $('#spng').onclick = () => {
+  $('#spng').onclick = async () => {
+    await ensureFonts();
     const dm = schematicDims(C, aw), sc = 2;
     const cv = document.createElement('canvas'); cv.width = dm.w * sc; cv.height = dm.h * sc;
     const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
@@ -1162,6 +1166,13 @@ function bindPrint() {
 }
 
 /* ===================== PDF ===================== */
+// 캔버스에 그릴 글자의 글꼴 조각을 미리 받아 둠 (Pretendard는 글자 범위별로 나뉘어 있어 화면에 없던 글자는 아직 안 받았을 수 있음)
+const FONT_BASE = '0123456789.,:;()[]/%+-x 가나다라마바사아자차카타파하코단회겉안뜨기오른왼교차줄늘림덮어씌우바늘실볼게이지치수도식화서술형차트무늬기호뒤앞판소매산목어깨진동가슴둘레총장너비길이밑단손목위팔고무쪽면시작끝완성사이즈작업자디자인표지';
+async function ensureFonts(extra) {
+  if (!document.fonts || !document.fonts.load) return;
+  const txt = FONT_BASE + (extra || '') + Object.values(STITCH).map(x => x.name).join('');
+  try { await Promise.race([Promise.all(['400', '500', '700'].map(w => document.fonts.load(`${w} 16px 'Pretendard Variable'`, txt))), new Promise(r => setTimeout(r, 4000))]); } catch (e) { }
+}
 const PG = { W: 840, H: 1188, M: 48 }; // 1단위 = 0.25mm
 async function makePDF(openIt) {
   const C = S.C; if (!C) return;
@@ -1171,7 +1182,7 @@ async function makePDF(openIt) {
   if (win) win.document.write('<p style="font-family:sans-serif">PDF를 만드는 중입니다...</p>');
   btn.disabled = true; st.textContent = '페이지를 그리는 중...';
   try {
-    await document.fonts.load("400 16px 'Noto Sans KR'"); await document.fonts.load("700 16px 'Noto Sans KR'");
+    await ensureFonts(textPlain(curText()) + C.pieces.map(p => p.name).join(''));
     const pages = buildPages(C);
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
@@ -1206,7 +1217,7 @@ function footer(D, n, N) {
   D.text(PG.W - PG.M, PG.H - 22, `${n} / ${N}`, 11, INK, 'right');
 }
 function wrapLines(ctx, px, text, size, weight, maxW) {
-  ctx.font = `${weight || 400} ${size * px}px 'Noto Sans KR', sans-serif`;
+  ctx.font = `${weight || 400} ${size * px}px ${CANVAS_FONT}`;
   const words = String(text).split(/(\s+)/);
   const lines = []; let cur = '';
   const fits = s => ctx.measureText(s).width / px <= maxW;

@@ -38,6 +38,7 @@ python3 tests/pdftest.py       # PDF 생성 시험 (out.pdf)
 
 - [x] 사이즈 그레이딩 표(도식화 탭, PDF 포함)
 - [x] 서술형 도안의 사이즈 병기 표기(예: 108(112, 116)코, 서술형 탭과 PDF)
+- [x] 전 조합 검증(tests/matrix.js 10,560조합, tests/fuzz.js 무작위 3,000개, npm run verify)
 - [ ] 래글런, 탑다운
 - [ ] 허리 쉐이핑
 - [ ] 소품(모자, 목도리)

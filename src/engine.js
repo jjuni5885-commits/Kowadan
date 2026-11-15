@@ -131,6 +131,15 @@ function distribute(H, n) { // H단 동안 n회, 간격은 짝수
   const y = Math.min(n, Math.floor(rem / 2));
   return [...Array(y).fill(lo + 2), ...Array(n - y).fill(lo)];
 }
+function fitBlocks(H, n) { // H단 안에 n코. 2단마다 1코로 모자라면 앞쪽 일부를 2코씩
+  if (n <= 0) return [];
+  const E = Math.max(1, Math.floor(H / 2));
+  if (n <= E) return distribute(H, n).map(len => ({ len, amt: 1 }));
+  const amts = Array(E).fill(1); let extra = n - E, i = 0;
+  while (extra > 0) { amts[i % E]++; extra--; i++; }
+  return amts.map(a => ({ len: 2, amt: a }));
+}
+function vBlocks(H, n) { return fitBlocks(H, n).map(b => ({ ...b, kind: b.amt >= 2 ? 'bo' : 'dec' })); }
 function mergeToFit(total, maxEvents, firstMin) { // 코 수를 횟수 한도에 맞게 묶음
   const a = Array(Math.max(0, total)).fill(1);
   if (firstMin && a.length >= firstMin + 1) { a.splice(0, firstMin, firstMin); }
@@ -145,10 +154,12 @@ function neckSide(fs, maxEv) { // 둥근 목선 한쪽 줄임 코 배열 (큰 �
   while (rem > 0) { a.push(1); rem--; }
   maxEv = Math.max(1, maxEv);
   while (a.length > maxEv) {
-    a.pop();
-    let k = 0;
-    for (let i = 1; i < a.length; i++) if (a[i] < a[i - 1]) { k = i; break; }
-    a[k]++;
+    const x = a.pop(); // 뺀 횟수의 코를 앞쪽에 하나씩 되돌려 합계 유지
+    for (let t = 0; t < x; t++) {
+      let k = 0;
+      for (let i = 1; i < a.length; i++) if (a[i] < a[i - 1]) { k = i; break; }
+      a[k]++;
+    }
   }
   return a;
 }
@@ -374,6 +385,13 @@ function compute(P, motifLib) {
   const isV = P.neck === 'v';
   const isDrop = P.sleeve === 'drop';
   const rowsOf = cm => Math.max(2, even(cm * gr));
+  // 입력 범위 확인 (오타, 단위 착오 잡기)
+  const RANGE = { chest: ['가슴둘레', 40, 170], hip: ['엉덩이둘레', 40, 180], shoulder: ['어깨너비', 20, 60], armDepth: ['진동깊이', 9, 30], neckW: ['목너비', 8, 25], armLen: ['팔길이', 20, 80], upperArm: ['위팔둘레', 12, 55], wrist: ['손목둘레', 8, 28] };
+  Object.keys(RANGE).forEach(k => { const [n, lo, hi] = RANGE[k], v = P.body[k]; if (v < lo || v > hi) warn(`${n} ${v}cm가 보통 범위(${lo}~${hi}cm)를 벗어납니다. 입력을 확인하세요.`); });
+  if (P.design.length < 25 || P.design.length > 100) warn(`총장 ${P.design.length}cm가 보통 범위(25~100cm)를 벗어납니다. 입력을 확인하세요.`);
+  if (gs * 10 < 8 || gs * 10 > 45) warn(`게이지 코 수(10cm에 ${r1(gs * 10)}코)가 보통 범위(8~45코)를 벗어납니다. 게이지 단위(1cm/10cm)를 확인하세요.`);
+  if (gr < gs * 0.9) warn('게이지 단 수가 코 수보다 적습니다. 코와 단을 바꿔 넣지 않았는지 확인하세요.');
+  if (P.gauge.dens && (P.gauge.dens < 1 || P.gauge.dens > 1.5)) warn(`꽈배기 수축 비율 ${P.gauge.dens}배는 보통 범위(1.0~1.5배)를 벗어납니다.`);
 
   // 완성 목표 치수
   const T = {
@@ -419,36 +437,38 @@ function compute(P, motifLib) {
   const neckStsBack = NshBack - 2 * shSts;
   if (neckStsBack < 6) warn('목 코 수가 너무 적습니다. 목너비나 어깨너비를 확인하세요.');
 
-  // 진동 단계
-  function armholeBlocks(A) {
-    const out = []; let rem = A;
-    if (rem <= 0) return out;
-    if (rem >= 4) { const b0 = clamp(Math.round(A * 0.35), 2, 6); out.push({ len: 2, amt: b0, kind: 'bo' }); rem -= b0; }
-    if (rem >= 5) { out.push({ len: 2, amt: 2, kind: 'bo' }); rem -= 2; }
-    let ones = 0;
-    while (rem > 0) { out.push({ len: ones < 6 ? 2 : 4, amt: 1, kind: 'dec' }); ones++; rem--; }
-    return out;
-  }
-  const ahBlocks = armholeBlocks(A);
-  const ahStart = ribRows + sideRows + 1;
-  const ahUsed = ahBlocks.reduce((a, x) => a + x.len, 0);
-
   // 어깨 단계
   const sdRows = rowsOf(d.shoulderDrop);
   const kSteps = clamp(Math.round(sdRows / 2), 2, Math.min(4, shSts));
   const shParts = Array.from({ length: kSteps }, (_, i) => Math.floor(shSts / kSteps) + (i < shSts % kSteps ? 1 : 0));
   const shStart = totalRows - 2 * kSteps + 1;
+  const ahStart = ribRows + sideRows + 1;
+
+  // 진동 단계: 덮어씌우기 후 2단마다 1코 6회, 나머지는 4단마다. 어깨 경사 4단 전까지 들어가도록 조정
+  function armholeBlocks(A) {
+    const out = []; let rem = A;
+    if (rem <= 0) return out;
+    const budget = shStart - ahStart - 4;
+    if (rem >= 4) { const b0 = clamp(Math.round(A * 0.35), 2, 6); out.push({ len: 2, amt: b0, kind: 'bo' }); rem -= b0; }
+    if (rem >= 5) { out.push({ len: 2, amt: 2, kind: 'bo' }); rem -= 2; }
+    while (rem >= 4 && 2 * (out.length + rem) > budget) { out.push({ len: 2, amt: 2, kind: 'bo' }); rem -= 2; }
+    const n4 = Math.max(0, Math.min(rem - 6, Math.floor((budget - 2 * (out.length + rem)) / 2)));
+    for (let i = 0; i < rem; i++) out.push({ len: i >= rem - n4 ? 4 : 2, amt: 1, kind: 'dec' });
+    return out;
+  }
+  const ahBlocks = armholeBlocks(A);
+  const ahUsed = ahBlocks.reduce((a, x) => a + x.len, 0);
   if (ahStart + ahUsed > shStart - 4) warn('진동 줄임이 어깨 경사와 겹칩니다. 진동깊이를 늘리거나 어깨너비를 넓히세요.');
 
   // 옆선 쉐이핑(밑단 -> 가슴)
   function sideShaping(Nh, Nc, oneSide) {
     const dd = oneSide ? (Nc - Nh) : (Nc - Nh) / 2;
     if (dd === 0) return { events: [], blocks: [], F: 0, kind: null, n: 0 };
-    const F = Math.min(rowsOf(4), Math.max(0, sideRows - 4));
-    const H = Math.max(2, sideRows - F - rowsOf(3));
-    const iv = distribute(H, Math.abs(dd));
-    if (iv.reduce((a, x) => a + x, 0) > H) warn('밑단과 가슴 폭 차이가 커서 옆선 쉐이핑 간격이 2단으로 촘촘합니다.');
-    const blocks = iv.map(len => ({ len, amt: 1 }));
+    let F = Math.min(rowsOf(4), Math.max(0, sideRows - 4));
+    let H = Math.max(2, sideRows - F - rowsOf(3));
+    if (2 * Math.abs(dd) > H) { F = 0; H = Math.max(2, sideRows - 2); } // 촘촘하면 평단을 줄여 옆선 전체에 배분
+    const blocks = fitBlocks(H, Math.abs(dd));
+    if (blocks.some(x => x.amt >= 2)) warn(`밑단과 가슴 폭 차이가 커서 옆선에서 2코씩 ${dd > 0 ? '늘리는' : '줄이는'} 단이 있습니다. 밑단둘레나 가슴 여유를 확인하세요.`);
     return { blocks, F, kind: dd > 0 ? 'inc' : 'dec', n: Math.abs(dd) };
   }
 
@@ -496,7 +516,7 @@ function compute(P, motifLib) {
     const neckSts = half ? NshThis - shSts : NshThis - 2 * shSts;
     info.neckSts = neckSts; info.Nsh = NshThis;
     if (kind === 'back') {
-      const nb = rowsOf(d.backNeckD);
+      const nb = Math.max(4, rowsOf(d.backNeckD)); // 나눈 단 + 줄임 단이 들어갈 최소 단수
       const s = totalRows - nb + 1;
       const maxEv = Math.max(1, nb / 2 - 1);
       const bs = clamp(Math.round(neckSts * 0.15), 2, 4);
@@ -508,7 +528,7 @@ function compute(P, motifLib) {
       addEvents(ops, blocksToEvents(s + 2, blocks, 'dec'), [{ seg: 'L', edge: 'right' }, { seg: 'R', edge: 'left' }]);
       info.neck = { type: 'back', s, center, blocks, depthRows: nb };
     } else if (kind === 'front' && !isV) {
-      const nf = rowsOf(d.frontNeckD);
+      const nf = Math.max(6, rowsOf(d.frontNeckD));
       const s = totalRows - nf + 1;
       const rn = roundNeck(neckSts, nf);
       const a = Math.round(centerCol - (rn.center - 1) / 2);
@@ -517,7 +537,7 @@ function compute(P, motifLib) {
       addEvents(ops, blocksToEvents(s + 2, blocks, 'dec'), [{ seg: 'L', edge: 'right' }, { seg: 'R', edge: 'left' }]);
       info.neck = { type: 'round', s, center: rn.center, blocks, depthRows: nf };
     } else if (kind === 'front' && isV) {
-      const nv = rowsOf(d.vDepth);
+      const nv = Math.max(8, rowsOf(d.vDepth));
       const s = totalRows - nv + 1;
       const odd = neckSts % 2 === 1;
       const fs = Math.floor(neckSts / 2);
@@ -525,20 +545,16 @@ function compute(P, motifLib) {
       if (odd) splits[s] = { a: Math.round(centerCol), b: Math.round(centerCol) };
       else splits[s] = { a: mid, b: mid - 1 }; // 0코 덮어씌우기
       const H = nv - 6;
-      let iv = distribute(H, fs);
-      if (iv.reduce((a, x) => a + x, 0) > H) warn('V넥 깊이에 비해 줄일 코가 많습니다. V넥 깊이를 늘리세요.');
-      const blocks = iv.map(len => ({ len, amt: 1, kind: 'dec' }));
+      const blocks = vBlocks(H, fs);
       addEvents(ops, blocksToEvents(s + 2, blocks, 'dec'), [{ seg: 'L', edge: 'right' }, { seg: 'R', edge: 'left' }]);
       info.neck = { type: 'v', s, center: odd ? 1 : 0, blocks, depthRows: nv };
     } else if (half) {
-      const neckRows = isV ? rowsOf(d.vDepth) : rowsOf(d.frontNeckD);
+      const neckRows = isV ? Math.max(8, rowsOf(d.vDepth)) : Math.max(6, rowsOf(d.frontNeckD));
       const s = totalRows - neckRows + 1;
       let blocks;
       if (isV) {
         const H = neckRows - 6;
-        const iv = distribute(H, neckSts);
-        if (iv.reduce((a, x) => a + x, 0) > H) warn('V넥 깊이에 비해 줄일 코가 많습니다. V넥 깊이를 늘리세요.');
-        blocks = iv.map(len => ({ len, amt: 1, kind: 'dec' }));
+        blocks = vBlocks(H, neckSts);
         addEvents(ops, blocksToEvents(s, blocks, 'dec'), centerEdge);
       } else {
         const maxEv = Math.max(2, Math.floor((neckRows - 4) / 2));
@@ -590,8 +606,8 @@ function compute(P, motifLib) {
     sleeveLen = T.armLen - (bodyChestCm - T.shoulder) / 2;
   }
   let Nup = stsFor(upperCm, laySleeve, gs, dens);
+  if (Nup < Ncuff) { warn('위팔둘레가 손목둘레보다 작게 계산되어 소매를 늘림 없이 곧게 뜹니다. 위팔둘레와 손목둘레를 확인하세요.'); Nup = Ncuff; }
   if ((Nup - Ncuff) % 2) Nup++;
-  if (Nup < Ncuff) warn('위팔둘레가 손목둘레보다 작게 계산되었습니다.');
 
   function sleeveBuild(capRows, capPlan) {
     const underRows = Math.max(4, rowsOf(sleeveLen) - capRows - cuffRows);
@@ -600,15 +616,15 @@ function compute(P, motifLib) {
     const l0 = (W - Ncuff) / 2;
     const ops = {};
     const di = (Nup - Ncuff) / 2;
-    const F = Math.min(rowsOf(2), Math.max(0, underRows - 4));
-    const H = Math.max(2, underRows - F - rowsOf(3));
-    const iv = distribute(H, di);
-    const incBlocks = iv.map(len => ({ len, amt: 1 }));
+    let F = Math.min(rowsOf(2), Math.max(0, underRows - 4));
+    let H = Math.max(2, underRows - F - rowsOf(3));
+    if (2 * di > H) { F = 0; H = Math.max(2, underRows - 2); }
+    const incBlocks = fitBlocks(H, di);
     addEvents(ops, blocksToEvents(cuffRows + 1 + F, incBlocks, 'inc'), [{ seg: 'main', edge: 'left' }, { seg: 'main', edge: 'right' }]);
     const capStart = cuffRows + underRows + 1;
     if (capPlan) addEvents(ops, blocksToEvents(capStart, capPlan, 'dec'), [{ seg: 'main', edge: 'left' }, { seg: 'main', edge: 'right' }]);
     const sim = simulate(W, l0, l0 + Ncuff - 1, total, ops, {});
-    return { W, sim, total, underRows, capStart, incBlocks, F, H, ivOver: iv.reduce((a, x) => a + x, 0) > H };
+    return { W, sim, total, underRows, capStart, incBlocks, F, H, ivOver: incBlocks.some(x => x.amt >= 2) };
   }
   function capPlanFor(hc) {
     const init = ahBlocks.filter(x => x.kind === 'bo').map(x => ({ ...x }));
@@ -624,7 +640,7 @@ function compute(P, motifLib) {
     if (rem > E) { // 가파른 소매산: 일부를 2코 덮어씌우기로
       const amts = Array(E).fill(1);
       let extra = rem - E, i = 0;
-      while (extra > 0) { const k = i % 2 === 0 ? Math.floor(i / 2) : E - 1 - Math.floor(i / 2); amts[k]++; extra--; i++; if (i > 4 * E) break; }
+      while (extra > 0) { const j = Math.floor(i / 2) % E; const k = i % 2 === 0 ? j : E - 1 - j; amts[k]++; extra--; i++; if (i > 8 * E) break; }
       if (extra > 0) return null;
       body = amts.map(a => ({ len: 2, amt: a, kind: a >= 2 ? 'bo' : 'dec' }));
     } else {
@@ -645,9 +661,8 @@ function compute(P, motifLib) {
 
   let sleeve, capInfo = null;
   if (!isDrop) {
-    const lo = Math.max(6, even(0.5 * ahRows)), hi = even(0.85 * ahRows);
     let best = null;
-    for (let hc = lo; hc <= hi; hc += 2) {
+    const tryCap = (lo, hi) => { for (let hc = lo; hc <= hi; hc += 2) {
       const cp = capPlanFor(hc); if (!cp) continue;
       const sb = sleeveBuild(hc, cp.blocks);
       const capEdge = seamLen(sb.sim.rows, sb.capStart, sb.total, 'right', gs, gr);
@@ -657,7 +672,11 @@ function compute(P, motifLib) {
       const easeC = capTotal - armTotal;
       const score = Math.abs(easeC - 1.5) + Math.max(0, cp.blocks.filter(x => x.amt >= 2).length - 4) * 0.4;
       if (!best || score < best.score) best = { hc, cp, sb, capTotal, armTotal, easeC, score };
-    }
+    } };
+    tryCap(Math.max(6, even(0.5 * ahRows)), even(0.85 * ahRows));
+    // 굵은 실, 큰 여유처럼 기본 범위(진동깊이 50~85%)로 맞지 않을 때만 35~95%로 넓힘
+    if (!best || best.easeC > 3) tryCap(Math.max(6, even(0.35 * ahRows)), even(0.5 * ahRows) - 2);
+    if (!best || best.easeC < -0.5) tryCap(even(0.85 * ahRows) + 2, even(0.95 * ahRows));
     if (!best) {
       warn('소매산을 진동둘레에 맞출 수 없어 기본값으로 계산했습니다. 위팔둘레, 진동깊이, 소매산 윗폭을 확인하세요.');
       const hc = even(0.65 * ahRows);
@@ -672,7 +691,7 @@ function compute(P, motifLib) {
   }
   if (capInfo && capInfo.blocks.length && capInfo.easeC > 3) warn(`소매산 둘레가 진동 둘레보다 ${fmt(capInfo.easeC)}cm 깁니다(권장 0~3cm). 위팔 여유를 줄이거나 진동깊이를 늘리면 소매산이 자연스러워집니다.`);
   if (capInfo && capInfo.blocks.length && capInfo.easeC < -0.5) warn(`소매산 둘레가 진동 둘레보다 ${fmt(-capInfo.easeC)}cm 짧습니다. 위팔 여유를 늘리거나 소매산 윗폭을 넓히세요.`);
-  if (sleeve.ivOver) warn('소매 늘림 간격이 2단으로 촘촘합니다. 소매길이나 위팔 여유를 확인하세요.');
+  if (sleeve.ivOver) warn('소매 늘림이 촘촘해 2코씩 늘리는 단이 있습니다. 소매길이나 위팔 여유를 확인하세요.');
   const sPlacements = [];
   {
     let x = Math.round((sleeve.W - laySleeve.panelW) / 2);
@@ -722,7 +741,7 @@ function compute(P, motifLib) {
   let band = null;
   if (isCard) {
     const fr = pieces.find(p => p.kind === 'rfront');
-    const edgeCm = (fr.info.neck.s - 1) / gr;
+    const edgeCm = (fr.info.neck.s - 1 + (isV ? 0 : nbRows)) / gr; // 라운드넥은 넥밴드 끝까지, V넥은 목선 시작까지
     let pick = Math.round(edgeCm * gs * 0.9);
     if (pat.rib === '2x2') pick = Math.round((pick - 2) / 4) * 4 + 2; else pick = pick % 2 ? pick : pick + 1;
     const nb = Math.max(2, d.buttons || 6);
@@ -770,7 +789,7 @@ function motifRowsText(m) {
 }
 function blocksDesc(lay, bg) {
   // 겉면 1단 기준, 오른쪽부터
-  const list = lay.blocks.slice().reverse().map(b => {
+  const list = lay.blocks.filter(b => b.w > 0).slice().reverse().map(b => {
     if (b.type === 'motif') return `${b.motif._label || b.motif.name} ${b.w}코`;
     if (b.type === 'purl') return `안뜨기 ${b.w}코`;
     return `${BG_NAME[bg]} ${b.w}코`;
@@ -832,11 +851,12 @@ function buildText(P, C) {
     const startN = isSleeve ? info.Ncuff : info.Nh;
     const ribR = pc.ribRows;
     Pp(`${g.ribNeedle || ''}mm 바늘로 일반코잡기 ${startN}코를 잡습니다. 가장자리 1코씩은 꿰매기용 코로 늘 겉뜨기합니다. ${ribName}로 ${cm(ribR)}cm(${ribR}단)를 뜹니다.`);
-    if (pc.lay.panelW) Pp(`${g.needle || ''}mm 바늘로 바꾸어 다음 배치로 뜹니다 (겉면, 오른쪽부터): 가장자리 1코, ${BG_NAME[pat.bg]} ${(startN - pc.lay.panelW - 2) / 2}코, ${blocksDesc(pc.lay, pat.bg).join(', ')}, ${BG_NAME[pat.bg]} ${(startN - pc.lay.panelW - 2) / 2}코, 가장자리 1코.`);
+    const sideN = (startN - pc.lay.panelW - 2) / 2, sideTxt = sideN > 0 ? `${BG_NAME[pat.bg]} ${sideN}코, ` : '';
+    if (pc.lay.panelW) Pp(`${g.needle || ''}mm 바늘로 바꾸어 다음 배치로 뜹니다 (겉면, 오른쪽부터): 가장자리 1코, ${sideTxt}${blocksDesc(pc.lay, pat.bg).join(', ')}, ${sideTxt}가장자리 1코.`);
     else Pp(`${g.needle || ''}mm 바늘로 바꾸어 가장자리 1코, ${BG_NAME[pat.bg]} ${startN - 2}코, 가장자리 1코로 뜹니다.`);
     if (!isSleeve) {
       const ss = info.side;
-      if (ss && ss.blocks.length) Pp(`옆선: 고무단 위로 평 ${ss.F}단을 뜬 뒤 ${pc.kind === 'rfront' || pc.kind === 'lfront' ? '옆선 쪽에서' : '양쪽에서'} ${notation(ss.blocks)} ${ss.kind === 'inc' ? '늘립니다' : '줄입니다'} (${ss.n}코씩). ${ss.kind === 'inc' ? '늘린 코는 바탕무늬로 뜹니다.' : ''}`);
+      if (ss && ss.blocks.length) Pp(`옆선: 고무단 위로 평 ${ss.F}단을 뜬 뒤 ${pc.kind === 'rfront' || pc.kind === 'lfront' ? '옆선 쪽에서' : '양쪽에서'} ${notation(ss.blocks)} ${ss.kind === 'inc' ? '늘립니다' : '줄입니다'} (${ss.n}코씩). ${ss.kind === 'inc' ? '늘린 코는 바탕무늬로 뜹니다.' : ''}${ss.blocks.some(x => x.amt >= 2) ? (ss.kind === 'inc' ? ' 2코씩 늘리는 단은 가장자리에서 감아코 2코를 만듭니다.' : ' 2코씩 줄이는 단은 덮어씌우기로 합니다.') : ''}`);
       Pp(`고무단 위로 ${cm(C.sideRows)}cm(${C.sideRows}단)까지 뜨면 ${info.Nc}코가 됩니다. 단수 링을 겁니다.`);
       if (C.A > 0) Pp(`진동: ${pc.kind === 'rfront' ? '왼쪽(옆선 쪽) 가장자리에서' : pc.kind === 'lfront' ? '오른쪽(옆선 쪽) 가장자리에서' : '양쪽에서'} ${notation(info.ahBlocks)} 줄입니다 (${C.A}코씩). ${pc.kind === 'rfront' || pc.kind === 'lfront' ? '' : `남은 코는 ${info.Nsh}코입니다.`}`);
       else Pp('드롭숄더이므로 진동 줄임 없이 곧게 뜹니다. 소매 달 위치에 단수 링을 겁니다.');
@@ -852,7 +872,8 @@ function buildText(P, C) {
       Pp(`총 ${pc.total}단, 총장 ${cm(pc.total)}cm.`);
     } else {
       const ib = info.incBlocks;
-      Pp(`소매 늘림: 소맷부리 위로 평 ${info.F}단을 뜬 뒤 양쪽에서 ${notation(ib)} 늘립니다. ${info.Nup}코가 됩니다. 늘린 코는 바탕무늬로 뜹니다.`);
+      if (ib.length) Pp(`소매 늘림: 소맷부리 위로 평 ${info.F}단을 뜬 뒤 양쪽에서 ${notation(ib)} 늘립니다. ${info.Nup}코가 됩니다. 늘린 코는 바탕무늬로 뜹니다.${ib.some(x => x.amt >= 2) ? ' 2코씩 늘리는 단은 가장자리에서 감아코 2코를 만듭니다.' : ''}`);
+      else Pp(`소매는 늘림 없이 ${info.Nup}코로 곧게 뜹니다.`);
       Pp(`소맷부리 위로 ${cm(info.underRows)}cm(${info.underRows}단)까지 뜹니다.`);
       if (info.cap) Pp(`소매산: 양쪽에서 ${notation(info.cap.blocks)} 줄인 뒤 남은 ${info.cap.topSts}코를 모두 덮어씌웁니다. 소매산 높이 ${cm(info.cap.hc)}cm(${info.cap.hc}단).`);
       else Pp(`드롭숄더이므로 소매산 없이 ${info.Nup}코를 모두 덮어씌웁니다.`);
@@ -865,7 +886,7 @@ function buildText(P, C) {
   if (C.isCard) {
     const b = C.band;
     Li(`넥밴드: ${g.ribNeedle || ''}mm 바늘로 앞중심 끝부터 목둘레를 따라 약 ${C.neckPick}코를 주워 ${ribName}로 ${cm(C.nbRows)}cm(${C.nbRows}단)를 뜨고 고무뜨기 덮어씌우기를 합니다.`);
-    Li(`앞단: 앞판 가장자리(밑단부터 넥밴드 끝까지)에서 ${b.pick}코를 주워 ${ribName}로 ${cm(b.rows)}cm(${b.rows}단)를 뜹니다. 단추 구멍 쪽 앞단(여성용은 오른앞판)은 ${Math.max(1, Math.floor(b.rows / 2))}단째에 아래에서부터 ${b.pos.join(', ')}번째 코 위치에 바늘비우기와 왼코 겹치기로 단추 구멍 ${b.nb}개를 냅니다.`);
+    Li(`앞단: 앞판 가장자리(밑단부터 ${C.isV ? 'V넥 시작점' : '넥밴드 끝'}까지)에서 ${b.pick}코를 주워 ${ribName}로 ${cm(b.rows)}cm(${b.rows}단)를 뜹니다. 단추 구멍 쪽 앞단(여성용은 오른앞판)은 ${Math.max(1, Math.floor(b.rows / 2))}단째에 아래에서부터 ${b.pos.join(', ')}번째 코 위치에 바늘비우기와 왼코 겹치기로 단추 구멍 ${b.nb}개를 냅니다.`);
   } else if (C.isV) {
     Li(`넥밴드: 왼쪽 어깨에서 시작해 목둘레를 따라 약 ${C.neckPick}코를 원통으로 줍고, V 중심 1코에 단수 링을 겁니다. ${ribName}로 뜨면서 매 단 V 중심에서 중심 3코 모아뜨기로 줄여 ${cm(C.nbRows)}cm(${C.nbRows}단)를 뜬 뒤 고무뜨기 덮어씌우기를 합니다.`);
   } else {

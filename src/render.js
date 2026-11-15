@@ -1,4 +1,5 @@
 'use strict';
+const CANVAS_FONT = "'Pretendard Variable', Pretendard, 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif";
 /* ===================== 그리기 백엔드 ===================== */
 const INK = '#1C1917', GRID = '#D6CFC7', GRID10 = '#78716C', PAPER = '#FFFFFF', TINT = '#F5E6C8', CENTER = '#E5989B', RIBLINE = '#8C3B32';
 const HL_FILL = 'rgba(140,59,50,0.18)', DIM_FILL = 'rgba(251,249,246,0.66)';
@@ -16,7 +17,7 @@ class SvgDraw {
   circle(cx, cy, r, fill, stroke, sw) { this.flush(); this.out.push(`<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${r.toFixed(2)}" fill="${fill || 'none'}"${stroke ? ` stroke="${stroke}" stroke-width="${sw || 1}"` : ''}/>`); }
   poly(pts, fill, stroke, sw, close = true) { this.flush(); const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join('') + (close ? 'Z' : ''); this.out.push(`<path d="${d}" fill="${fill || 'none'}"${stroke ? ` stroke="${stroke}" stroke-width="${sw || 1}" stroke-linejoin="round"` : ''}/>`); }
   text(x, y, s, size, col, align, weight) { this.flush(); const a = align === 'right' ? 'end' : align === 'center' ? 'middle' : 'start'; this.out.push(`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" fill="${col || INK}" text-anchor="${a}" dominant-baseline="middle" font-weight="${weight || 400}">${String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>`); }
-  toString() { this.flush(); return `<svg xmlns="http://www.w3.org/2000/svg" width="${this.w}" height="${this.h}" viewBox="0 0 ${this.w} ${this.h}" font-family="'Pretendard Variable', 'Noto Sans KR', sans-serif" style="font-variant-numeric:tabular-nums">${this.out.join('')}</svg>`; }
+  toString() { this.flush(); return `<svg xmlns="http://www.w3.org/2000/svg" width="${this.w}" height="${this.h}" viewBox="0 0 ${this.w} ${this.h}" font-family="'Pretendard Variable', Pretendard, 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" style="font-variant-numeric:tabular-nums">${this.out.join('')}</svg>`; }
 }
 class CanvasDraw {
   constructor(ctx, ox = 0, oy = 0, sc = 1) { this.c = ctx; this.ox = ox; this.oy = oy; this.s = sc; }
@@ -27,7 +28,7 @@ class CanvasDraw {
   rect(x, y, w, h, fill, stroke, sw) { const c = this.c; if (fill) { c.fillStyle = fill; c.fillRect(this.X(x), this.Y(y), w * this.s, h * this.s); } if (stroke) { c.lineWidth = (sw || 1) * this.s; c.strokeStyle = stroke; c.strokeRect(this.X(x), this.Y(y), w * this.s, h * this.s); } }
   circle(cx, cy, r, fill, stroke, sw) { const c = this.c; c.beginPath(); c.arc(this.X(cx), this.Y(cy), r * this.s, 0, Math.PI * 2); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.lineWidth = (sw || 1) * this.s; c.strokeStyle = stroke; c.stroke(); } }
   poly(pts, fill, stroke, sw, close = true) { const c = this.c; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(this.X(p[0]), this.Y(p[1])) : c.moveTo(this.X(p[0]), this.Y(p[1]))); if (close) c.closePath(); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.lineWidth = (sw || 1) * this.s; c.strokeStyle = stroke; c.lineJoin = 'round'; c.stroke(); } }
-  text(x, y, s, size, col, align, weight) { const c = this.c; c.font = `${weight || 400} ${size * this.s}px 'Noto Sans KR', 'Pretendard Variable', sans-serif`; c.fillStyle = col || INK; c.textAlign = align || 'left'; c.textBaseline = 'middle'; c.fillText(String(s), this.X(x), this.Y(y)); }
+  text(x, y, s, size, col, align, weight) { const c = this.c; c.font = `${weight || 400} ${size * this.s}px ${CANVAS_FONT}`; c.fillStyle = col || INK; c.textAlign = align || 'left'; c.textBaseline = 'middle'; c.fillText(String(s), this.X(x), this.Y(y)); }
 }
 
 /* ---------- 기호 ---------- */
@@ -240,7 +241,7 @@ function pieceOutlineCells(pc) {
   for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => rects.push([s.l, r, s.r - s.l + 1]));
   return rects;
 }
-function drawSchematicPiece(D, C, pc, bx, by, scale, fs) {
+function drawSchematicPiece(D, C, pc, bx, by, scale, fs, mini) {
   const gs = C.gs, gr = C.gr;
   fs = fs || 11;
   const ph = (pc.total / gr) * scale, pw = (pc.W / gs) * scale;
@@ -255,7 +256,7 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs) {
     D.line(x, ya, x, yb, lw * 0.8, RIBLINE); D.line(x - fs * 0.35, ya, x + fs * 0.35, ya, lw * 0.8, RIBLINE); D.line(x - fs * 0.35, yb, x + fs * 0.35, yb, lw * 0.8, RIBLINE);
     D.text(x + (side === 'left' ? -fs * 0.5 : fs * 0.5), (ya + yb) / 2, label, fs, INK, side === 'left' ? 'right' : 'left', 500);
   };
-  D.text(bx + pw / 2, by - fs * 4.4, pc.name, fs * 1.25, INK, 'center', 700);
+  D.text(bx + pw / 2, by - fs * (mini ? 1.3 : 5.2), pc.name, fs * (mini ? 1.15 : 1.25), INK, 'center', 700);
   for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => D.fillRect(sx(s.l), sy(r), ((s.r - s.l + 1) / gs) * scale + 0.3, scale / gr + 0.3, r <= pc.ribRows ? '#EAE4DC' : '#FAF7F2'));
   const ex = (r, c) => pc.codes[r] && pc.codes[r][c] !== null && pc.codes[r][c] !== undefined;
   for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => {
@@ -267,6 +268,7 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs) {
     for (let c = s.l; c <= s.r + 1; c++) { const open = c <= s.r && !ex(r - 1, c); if (open && a === null) a = c; if (!open && a !== null) { D.line(sx(a), sy(r - 1), sx(c), sy(r - 1), lw * 1.4, INK, 'square'); a = null; } }
   });
   D.flush();
+  if (mini) return { w: pw, h: ph };
   const f = C.finished, info = pc.info, lay = pc.lay;
   const cmOf = n => cmFor(n, lay, gs, C.dens);
   const row1 = pc.rows[1][0], row1r = pc.rows[1][pc.rows[1].length - 1];
@@ -277,7 +279,7 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs) {
     dimH(sx(ul), sx(uh), sy(ur) + fs * 1.1, `${fmt(cmOf(info.Nc))}cm (${info.Nc}코)`);
     const xl = sx(Math.min(row1.l, ul));
     dimV(xl - fs * 1.4, base, sy(pc.total), `${fmt(pc.total / gr)}cm`, 'left');
-    dimV(xl - fs * 5.6, base, sy(C.ribRows), `${fmt(C.ribRows / gr)}`, 'left');
+    dimV(xl - fs * 5.6, base, sy(C.ribRows), `${fmt(C.ribRows / gr)}cm`, 'left');
     const xr = sx(Math.max(uh, row1r.r + 1)) + fs * 1.3;
     dimV(xr, sy(ur), sy(pc.total), `${fmt(C.ahRows / gr)}cm`, 'right');
     if (pc.kind === 'back' && info.neck) {
@@ -289,7 +291,9 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs) {
     }
     if (info.neck && pc.kind !== 'back') {
       const xx = pc.kind === 'front' ? sx(pc.W / 2) : pc.kind === 'rfront' ? sx(row1r.r + 1) - fs * 0.6 : sx(row1.l) + fs * 0.6;
-      dimV(xx, sy(info.neck.s - 1), sy(pc.total), `${fmt(info.neck.depthRows / gr)}`, pc.kind === 'lfront' ? 'right' : 'left');
+      const ya = sy(info.neck.s - 1), yb = sy(pc.total);
+      D.line(xx, ya, xx, yb, lw * 0.8, RIBLINE); D.line(xx - fs * 0.35, ya, xx + fs * 0.35, ya, lw * 0.8, RIBLINE); D.line(xx - fs * 0.35, yb, xx + fs * 0.35, yb, lw * 0.8, RIBLINE);
+      D.text(xx, ya + fs * 0.9, `목 깊이 ${fmt(info.neck.depthRows / gr)}cm`, fs, INK, pc.kind === 'front' ? 'center' : pc.kind === 'rfront' ? 'right' : 'left', 500);
     }
   } else {
     dimH(sx(row1.l), sx(row1r.r + 1), base + fs * 1.3, `${fmt(f.cuff)}cm (${info.Ncuff}코)`);
@@ -297,27 +301,27 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs) {
     const s = pc.rows[ur][0];
     dimH(sx(s.l), sx(s.r + 1), sy(ur) + fs * 1.1, `${fmt(f.upper)}cm (${info.Nup}코)`);
     dimV(sx(Math.min(s.l, row1.l)) - fs * 1.4, base, sy(pc.total), `${fmt(pc.total / gr)}cm`, 'left');
-    if (info.cap) dimV(sx(s.r + 1) + fs * 1.3, sy(ur), sy(pc.total), `소매산 ${fmt(info.cap.hc / gr)}`, 'right');
+    if (info.cap) dimV(sx(s.r + 1) + fs * 1.3, sy(ur), sy(pc.total), `소매산 ${fmt(info.cap.hc / gr)}cm`, 'right');
   }
   D.flush();
   return { w: pw, h: ph };
 }
 function schemPieces(C) { return C.pieces.filter(p => p.kind !== 'lfront'); }
-function schematicDims(C, availW) {
-  const fs = 11, padL = fs * 8, padR = fs * 6, padT = fs * 6, padB = fs * 3.4;
+function schematicDims(C, availW, mini) {
+  const fs = 11, padL = fs * (mini ? 1.2 : 8.4), padR = fs * (mini ? 1.2 : 10), padT = fs * (mini ? 2.4 : 6.8), padB = fs * (mini ? 0.6 : 3.4);
   const list = schemPieces(C);
   const sumW = list.reduce((a, pc) => a + pc.W / C.gs, 0);
-  const scale = Math.max(2.2, Math.min(7, (availW - list.length * (padL + padR)) / sumW));
+  const scale = Math.max(mini ? 0.8 : 2.2, Math.min(7, (availW - list.length * (padL + padR)) / sumW));
   const w = list.reduce((a, pc) => a + (pc.W / C.gs) * scale + padL + padR, 0);
   const h = Math.max(...list.map(pc => (pc.total / C.gr) * scale)) + padT + padB;
-  return { fs, padL, padR, padT, padB, list, scale, w: Math.ceil(w), h: Math.ceil(h) };
+  return { fs, padL, padR, padT, padB, list, scale, mini, w: Math.ceil(w), h: Math.ceil(h) };
 }
 function drawSchematicAll(D, C, dm) {
   let x = 0;
-  dm.list.forEach(pc => { const r = drawSchematicPiece(D, C, pc, x + dm.padL, dm.padT, dm.scale, dm.fs); x += r.w + dm.padL + dm.padR; });
+  dm.list.forEach(pc => { const r = drawSchematicPiece(D, C, pc, x + dm.padL, dm.padT, dm.scale, dm.fs, dm.mini); x += r.w + dm.padL + dm.padR; });
 }
-function schematicSVG(C, availW) {
-  const dm = schematicDims(C, availW);
+function schematicSVG(C, availW, mini) {
+  const dm = schematicDims(C, availW, mini);
   const D = new SvgDraw(dm.w, dm.h);
   drawSchematicAll(D, C, dm);
   return D.toString();
