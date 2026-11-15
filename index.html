@@ -1598,7 +1598,7 @@ function defaultProject() {
 const S = {
   P: defaultProject(), id: null, dirty: false, tab: 'size', piece: 'back',
   chart: { cell: 14, showKnit: true, tint: true, ratio: false, center: true, dim: true },
-  print: { cell: 4, ratio: false, cover: true, schem: true, grade: true, text: true, motifs: true, charts: true },
+  print: { cell: 4, ratio: false, vec: true, cover: true, schem: true, grade: true, text: true, motifs: true, charts: true },
   projects: [], motifs: [], workers: ['작업자 1', '작업자 2'], worker: '', filterMine: false,
   C: null, T: null, err: null, editor: null, store: 'local', dl: null, scrolled: {},
 };
@@ -2652,6 +2652,7 @@ function viewPrint() {
       ${[['cover', '표지와 재료'], ['schem', '도식화'], ['grade', '사이즈 그레이딩 표'], ['text', '서술형 도안'], ['motifs', '무늬 차트'], ['charts', '조각 차트'], ['ratio', '게이지 비율 칸']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-pr="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
     </div>
     ${gradeSizes().length >= 2 ? `<div class="row wrap"><label class="chk"><input type="checkbox" id="pgraded" ${gradedOn() ? 'checked' : ''}><span>표지와 서술형 도안에 사이즈 병기 (${esc(gradeSizes().map(presetLabel).join(', '))})</span></label></div>` : ''}
+    <div class="row wrap"><label class="chk"><input type="checkbox" data-pr="vec" ${o.vec ? 'checked' : ''}><span>가벼운 PDF (선과 글자를 그대로 저장해 용량이 작고 인쇄가 선명함. 처음 한 번 글꼴 약 5MB를 받음)</span></label></div>
     <div class="row wrap"><button class="btn pri big" id="mkpdf" ${C ? '' : 'disabled'}>PDF 저장</button>${IN_CLAUDE ? '' : `<button class="btn big" id="prpdf" ${C ? '' : 'disabled'}>PDF 열어서 인쇄</button>`}<span id="pdfst" class="desc"></span></div>
   </section>
   <section class="card">
@@ -2733,6 +2734,92 @@ async function ensureFonts(extra) {
   try { await Promise.race([Promise.all(['400', '500', '700'].map(w => document.fonts.load(`${w} 16px 'Pretendard Variable'`, txt))), new Promise(r => setTimeout(r, 4000))]); } catch (e) { }
 }
 const PG = { W: 840, H: 1188, M: 48 }; // 1단위 = 0.25mm
+
+// 벡터 PDF: 선, 칸, 글자를 그대로 PDF 명령으로 씀. 글꼴은 Pretendard TTF를 받아 쓴 글자만 넣음(subset)
+const PDF_FONT_URL = 'https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/public/static/alternative/Pretendard-';
+const PDF_FONTS = {};
+async function loadPdfFont(w) {
+  if (PDF_FONTS[w]) return PDF_FONTS[w];
+  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = await fetch(PDF_FONT_URL + w + '.ttf', { signal: ctl.signal });
+    if (!r.ok) throw new Error('글꼴 ' + r.status);
+    const u8 = new Uint8Array(await r.arrayBuffer()); let s = '';
+    for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+    return (PDF_FONTS[w] = s);
+  } finally { clearTimeout(tm); }
+}
+function pdfColor(c) {
+  c = String(c || INK).trim();
+  let m = c.match(/^#([0-9a-f]{3})$/i);
+  if (m) return [...m[1]].map(h => parseInt(h + h, 16)).concat(1);
+  m = c.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/i);
+  if (m) return [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)).concat(m[2] ? parseInt(m[2], 16) / 255 : 1);
+  m = c.match(/^rgba?\(([^)]+)\)$/i);
+  if (m) { const v = m[1].split(',').map(Number); return [v[0], v[1], v[2], v[3] == null ? 1 : v[3]]; }
+  if (c === 'none' || c === 'transparent') return [0, 0, 0, 0];
+  return [28, 25, 23, 1];
+}
+class PdfDraw {
+  constructor(doc, ox = 0, oy = 0, sc = 1) { this.c = doc; this.ox = ox; this.oy = oy; this.s = sc; if (!doc._gs) doc._gs = {}; }
+  X(x) { return this.ox + x * this.s; } Y(y) { return this.oy + y * this.s; }
+  _a(a) { const d = this.c, k = a >= 1 ? 1 : Math.round(a * 100) / 100; if (d._ga === k) return; if (!d._gs[k]) d._gs[k] = new d.GState({ opacity: k, 'stroke-opacity': k }); d.setGState(d._gs[k]); d._ga = k; }
+  _f(col) { const [r, g, b, a] = pdfColor(col); this.c.setFillColor(r, g, b); this._a(a); return a > 0; }
+  _st(col, sw) { const [r, g, b, a] = pdfColor(col); this.c.setDrawColor(r, g, b); this.c.setLineWidth(Math.max(0.05, (sw || 1) * this.s)); this._a(a); return a > 0; }
+  flush() { }
+  line(x1, y1, x2, y2, sw, col, cap) { if (!this._st(col, sw)) return; this.c.setLineCap(cap === 'round' ? 'round' : cap === 'square' ? 'square' : 'butt'); this.c.line(this.X(x1), this.Y(y1), this.X(x2), this.Y(y2), 'S'); }
+  fillRect(x, y, w, h, fill) { if (this._f(fill)) this.c.rect(this.X(x), this.Y(y), w * this.s, h * this.s, 'F'); }
+  rect(x, y, w, h, fill, stroke, sw) { if (fill) this.fillRect(x, y, w, h, fill); if (stroke && this._st(stroke, sw)) { this.c.setLineJoin('miter'); this.c.rect(this.X(x), this.Y(y), w * this.s, h * this.s, 'S'); } }
+  circle(cx, cy, r, fill, stroke, sw) { if (fill && this._f(fill)) this.c.circle(this.X(cx), this.Y(cy), r * this.s, 'F'); if (stroke && this._st(stroke, sw)) this.c.circle(this.X(cx), this.Y(cy), r * this.s, 'S'); }
+  poly(pts, fill, stroke, sw, close = true) {
+    if (!pts.length) return;
+    const d = pts.slice(1).map((p, i) => [(p[0] - pts[i][0]) * this.s, (p[1] - pts[i][1]) * this.s]);
+    const x0 = this.X(pts[0][0]), y0 = this.Y(pts[0][1]);
+    if (fill && close && this._f(fill)) this.c.lines(d, x0, y0, [1, 1], 'F', true);
+    if (stroke && this._st(stroke, sw)) { this.c.setLineJoin('round'); this.c.lines(d, x0, y0, [1, 1], 'S', close); }
+  }
+  text(x, y, s, size, col, align, weight) {
+    s = String(s); if (!s.trim()) return;
+    const d = this.c, [r, g, b, a] = pdfColor(col || INK);
+    d.setFont('Pretendard', (weight || 400) >= 600 ? 'bold' : 'normal');
+    d.setFontSize(size * this.s * 72 / 25.4);
+    d.setTextColor(r, g, b); this._a(a);
+    d.text(s, this.X(x), this.Y(y), { align: align === 'right' ? 'right' : align === 'center' ? 'center' : 'left', baseline: 'middle' });
+  }
+}
+async function makeVectorDoc(pages, st) {
+  const [reg, bold] = await Promise.all([loadPdfFont('Regular'), loadPdfFont('Bold')]);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  doc.addFileToVFS('Pretendard-Regular.ttf', reg); doc.addFont('Pretendard-Regular.ttf', 'Pretendard', 'normal');
+  doc.addFileToVFS('Pretendard-Bold.ttf', bold); doc.addFont('Pretendard-Bold.ttf', 'Pretendard', 'bold');
+  for (let i = 0; i < pages.length; i++) {
+    st.textContent = `페이지 ${i + 1} / ${pages.length} 그리는 중...`;
+    await new Promise(r => setTimeout(r, 0));
+    if (i) doc.addPage();
+    const D = new PdfDraw(doc, 0, 0, 210 / PG.W);
+    pages[i](D, null, 0);
+    footer(D, i + 1, pages.length);
+  }
+  return doc;
+}
+async function makeImageDoc(pages, st) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const px = 1240 / PG.W; // 150dpi
+  for (let i = 0; i < pages.length; i++) {
+    st.textContent = `페이지 ${i + 1} / ${pages.length} 그리는 중...`;
+    await new Promise(r => setTimeout(r, 0));
+    const cv = document.createElement('canvas'); cv.width = 1240; cv.height = 1754;
+    const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    const D = new CanvasDraw(ctx, 0, 0, px);
+    pages[i](D, ctx, px);
+    footer(D, i + 1, pages.length);
+    if (i) doc.addPage();
+    doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297);
+  }
+  return doc;
+}
 async function makePDF(openIt) {
   const C = S.C; if (!C) return;
   const st = $('#pdfst'); const btn = openIt ? $('#prpdf') : $('#mkpdf');
@@ -2743,30 +2830,23 @@ async function makePDF(openIt) {
   try {
     await ensureFonts(textPlain(curText()) + C.pieces.map(p => p.name).join(''));
     const pages = buildPages(C);
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-    const px = 1240 / PG.W; // 150dpi
-    for (let i = 0; i < pages.length; i++) {
-      st.textContent = `페이지 ${i + 1} / ${pages.length} 그리는 중...`;
-      await new Promise(r => setTimeout(r, 0));
-      const cv = document.createElement('canvas'); cv.width = 1240; cv.height = 1754;
-      const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
-      const D = new CanvasDraw(ctx, 0, 0, px);
-      pages[i](D, ctx, px);
-      footer(D, i + 1, pages.length);
-      if (i) doc.addPage();
-      doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297);
+    let doc = null, note = '';
+    if (S.print.vec) {
+      try { st.textContent = 'PDF 글꼴을 받는 중...'; doc = await makeVectorDoc(pages, st); }
+      catch (e) { console.warn(e); doc = null; note = ' (글꼴을 받지 못해 이미지 방식으로 만들었습니다)'; }
     }
+    if (!doc) doc = await makeImageDoc(pages, st);
     const blob = doc.output('blob');
+    const mb = (blob.size / 1048576).toFixed(1) + 'MB';
     if (openIt) {
       const url = URL.createObjectURL(blob);
       if (win) win.location.href = url; else window.open(url, '_blank');
-      st.textContent = `PDF ${pages.length}쪽을 새 창에 열었습니다. 그 창에서 인쇄하세요.`;
+      st.textContent = `PDF ${pages.length}쪽(${mb})을 새 창에 열었습니다. 그 창에서 인쇄하세요.${note}`;
       btn.disabled = false; return;
     }
     st.textContent = 'PDF 저장 창을 엽니다...';
     const ok = await saveFile(`${safeName(S.P.name)}.pdf`, blob);
-    st.textContent = ok ? `PDF ${pages.length}쪽을 저장했습니다.` : '';
+    st.textContent = ok ? `PDF ${pages.length}쪽(${mb})을 저장했습니다.${note}` : '';
   } catch (e) { console.error(e); st.textContent = 'PDF를 만들지 못했습니다: ' + e.message; if (win) win.close(); }
   btn.disabled = false;
 }
@@ -2908,7 +2988,7 @@ function buildPages(C) {
         if (x + w > X1) { x = X0; y += rowH + 20; rowH = 0; }
         if (y + h > Y1) pushPage();
         const ox = x, oy = y;
-        items.push((D) => { const sub = new CanvasDraw(D.c, D.ox + ox * D.s, D.oy + oy * D.s, D.s); drawChart(sub, mp, { cw: cs, ch: cs, showKnit: true, title: `${m._label || ''} ${m.name}` }); });
+        items.push((D) => { const sub = new D.constructor(D.c, D.ox + ox * D.s, D.oy + oy * D.s, D.s); drawChart(sub, mp, { cw: cs, ch: cs, showKnit: true, title: `${m._label || ''} ${m.name}` }); });
         x += w + 24; rowH = Math.max(rowH, h);
       });
       if (items.length) pushPage();
@@ -2934,7 +3014,7 @@ function buildPages(C) {
       }
       tiles.forEach((t, i) => {
         const title = `${pc.name} 차트 ${i + 1}/${tiles.length}: ${pc.W - t.c1}~${pc.W - t.c0}코, ${t.r0}~${t.r1}단`;
-        pages.push(D => { const sub = new CanvasDraw(D.c, D.ox + X0 * D.s, D.oy + Y0 * D.s, D.s); drawChart(sub, pc, { cw, ch, r0: t.r0, r1: t.r1, c0: t.c0, c1: t.c1, showKnit: S.chart.showKnit, tint: S.chart.tint, center: S.chart.center, title }); });
+        pages.push(D => { const sub = new D.constructor(D.c, D.ox + X0 * D.s, D.oy + Y0 * D.s, D.s); drawChart(sub, pc, { cw, ch, r0: t.r0, r1: t.r1, c0: t.c0, c1: t.c1, showKnit: S.chart.showKnit, tint: S.chart.tint, center: S.chart.center, title }); });
       });
     });
   }

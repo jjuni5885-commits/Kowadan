@@ -4,7 +4,7 @@
 
 - 배포 주소: https://jjuni5885-commits.github.io/Kowadan/ (GitHub Pages, main 브랜치 루트)
 - 개인용 사본: Claude 아티팩트 https://claude.ai/artifact/WpWcq5BhTccAhhhwowXpTG
-- 한 파일 HTML (저장소 루트의 `index.html`), 외부 의존은 Google Fonts(Noto Sans KR)와 cdnjs의 jsPDF 2.5.1
+- 한 파일 HTML (저장소 루트의 `index.html`), 외부 의존은 jsdelivr의 Pretendard(화면 글꼴, 가벼운 PDF용 TTF)와 cdnjs의 jsPDF 2.5.1
 
 ## 구조
 
@@ -25,6 +25,7 @@ npm install          # 시험용 jsPDF
 npm test             # 엔진 계산 시험
 python3 tests/shot.py 1200     # 탭별 화면 캡처
 python3 tests/pdftest.py       # PDF 생성 시험 (out.pdf)
+python3 tests/vector_pdf_test.py --both   # 가벼운(벡터) PDF와 이미지 PDF 비교
 ```
 
 ## 계산 규칙
@@ -38,6 +39,7 @@ python3 tests/pdftest.py       # PDF 생성 시험 (out.pdf)
 
 - [x] 사이즈 그레이딩 표(도식화 탭, PDF 포함)
 - [x] 서술형 도안의 사이즈 병기 표기(예: 108(112, 116)코, 서술형 탭과 PDF)
+- [x] 가벼운 PDF: 선, 칸, 글자를 벡터로 쓰고 Pretendard 쓴 글자만 넣음(30쪽 8.6MB → 1.3MB, 글자 검색, 복사 가능). 글꼴을 못 받으면 이미지 방식으로 자동 대체
 - [x] 전 조합 검증(tests/matrix.js 10,560조합, tests/fuzz.js 무작위 3,000개, npm run verify)
 - [ ] 래글런, 탑다운
 - [ ] 허리 쉐이핑
