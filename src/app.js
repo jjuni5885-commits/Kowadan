@@ -183,7 +183,7 @@ const TAB_GROUPS = [['설계', [['proj', '프로젝트'], ['size', '치수'], ['
 function renderAll() {
   $('#app').innerHTML = `
   <header class="top">
-    <div class="brand"><span class="badge" aria-hidden="true">${moonSVG(40, { disc: BRAND.moon, zoom: 1.32 })}</span><span class="bname"><span class="logo">코와단</span><span class="sub"><span class="h1">달의</span> <span class="h2">정원</span> <span class="h3">손뜨개</span></span></span></div>
+    <div class="brand"><span class="bmark" aria-hidden="true">${moonSVG(40, { disc: BRAND.moon, zoom: 1.32 })}</span><span class="bname"><span class="logo">코와단</span><span class="sub"><span class="h1">달의</span> <span class="h2">정원</span> <span class="h3">손뜨개</span></span></span></div>
     <div class="hdr" id="hdr"></div>
   </header>
   <nav class="tabs" id="tabs">${TAB_GROUPS.map(([g, tabs], gi) => `${gi ? '<span class="tdiv" aria-hidden="true"></span>' : ''}<span class="tgl">${g}</span>${tabs.map(([k, n]) => `<button data-tab="${k}">${icon(k)}<span>${n}</span></button>`).join('')}`).join('')}</nav>

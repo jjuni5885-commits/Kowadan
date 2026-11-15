@@ -34,8 +34,8 @@ input[type=number],.mtable,.tbl,.kv,.prog,.rjump,.aformula,svg text{font-variant
 /* 헤더 */
 .top{position:sticky;top:0;z-index:30;height:var(--hdr-h);background:var(--night);color:var(--moon);padding:0 20px;display:flex;align-items:center;gap:14px}
 .brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
-.badge{flex:0 0 auto;display:flex;width:40px;height:40px}
-.badge svg{width:40px;height:40px;display:block}
+.bmark{flex:0 0 auto;display:flex;width:40px;height:40px}
+.bmark svg{width:40px;height:40px;display:block}
 .bname{display:flex;flex-direction:column;line-height:1.1;min-width:0}
 .logo{font-weight:800;font-size:20px;letter-spacing:-0.03em;color:var(--moon)}
 .sub{font-family:var(--hand);font-size:19px;letter-spacing:0;white-space:nowrap}
@@ -187,7 +187,7 @@ main{max-width:1240px;margin:0 auto;padding:18px 16px 90px}
 .pbar i{display:block;height:100%;background:var(--rose);border-radius:5px}
 .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .badges:empty{display:none}
-.badge{font-size:12px;font-weight:700;border-radius:20px;padding:3px 10px;background:var(--surface-sub);color:var(--ink)}
+.badge{font-size:12px;font-weight:700;border-radius:20px;padding:3px 10px;white-space:nowrap;background:var(--surface-sub);color:var(--ink)}
 .b-shape{background:var(--rose2);color:var(--rose)}
 .b-cross{background:#F5E6C8;color:#6B4E16}
 .b-rib{background:#EAE4DC}
@@ -1798,7 +1798,7 @@ const TAB_GROUPS = [['설계', [['proj', '프로젝트'], ['size', '치수'], ['
 function renderAll() {
   $('#app').innerHTML = `
   <header class="top">
-    <div class="brand"><span class="badge" aria-hidden="true">${moonSVG(40, { disc: BRAND.moon, zoom: 1.32 })}</span><span class="bname"><span class="logo">코와단</span><span class="sub"><span class="h1">달의</span> <span class="h2">정원</span> <span class="h3">손뜨개</span></span></span></div>
+    <div class="brand"><span class="bmark" aria-hidden="true">${moonSVG(40, { disc: BRAND.moon, zoom: 1.32 })}</span><span class="bname"><span class="logo">코와단</span><span class="sub"><span class="h1">달의</span> <span class="h2">정원</span> <span class="h3">손뜨개</span></span></span></div>
     <div class="hdr" id="hdr"></div>
   </header>
   <nav class="tabs" id="tabs">${TAB_GROUPS.map(([g, tabs], gi) => `${gi ? '<span class="tdiv" aria-hidden="true"></span>' : ''}<span class="tgl">${g}</span>${tabs.map(([k, n]) => `<button data-tab="${k}">${icon(k)}<span>${n}</span></button>`).join('')}`).join('')}</nav>
