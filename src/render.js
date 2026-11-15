@@ -1,6 +1,7 @@
 'use strict';
 /* ===================== 그리기 백엔드 ===================== */
-const INK = '#2A2320', GRID = '#C9BDB2', GRID10 = '#6F625A', PAPER = '#FFFFFF', TINT = '#FBE7B0', CENTER = '#F2A9C4', RIBLINE = '#A23E57';
+const INK = '#1C1917', GRID = '#D6CFC7', GRID10 = '#78716C', PAPER = '#FFFFFF', TINT = '#F5E6C8', CENTER = '#E5989B', RIBLINE = '#8C3B32';
+const HL_FILL = 'rgba(140,59,50,0.18)', DIM_FILL = 'rgba(251,249,246,0.66)';
 class SvgDraw {
   constructor(w, h) { this.w = w; this.h = h; this.out = []; this.lb = new Map(); this.fb = new Map(); }
   _k(m, k) { let b = m.get(k); if (!b) { b = []; m.set(k, b); } return b; }
@@ -15,7 +16,7 @@ class SvgDraw {
   circle(cx, cy, r, fill, stroke, sw) { this.flush(); this.out.push(`<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${r.toFixed(2)}" fill="${fill || 'none'}"${stroke ? ` stroke="${stroke}" stroke-width="${sw || 1}"` : ''}/>`); }
   poly(pts, fill, stroke, sw, close = true) { this.flush(); const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join('') + (close ? 'Z' : ''); this.out.push(`<path d="${d}" fill="${fill || 'none'}"${stroke ? ` stroke="${stroke}" stroke-width="${sw || 1}" stroke-linejoin="round"` : ''}/>`); }
   text(x, y, s, size, col, align, weight) { this.flush(); const a = align === 'right' ? 'end' : align === 'center' ? 'middle' : 'start'; this.out.push(`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" fill="${col || INK}" text-anchor="${a}" dominant-baseline="middle" font-weight="${weight || 400}">${String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>`); }
-  toString() { this.flush(); return `<svg xmlns="http://www.w3.org/2000/svg" width="${this.w}" height="${this.h}" viewBox="0 0 ${this.w} ${this.h}" font-family="'Noto Sans KR', sans-serif">${this.out.join('')}</svg>`; }
+  toString() { this.flush(); return `<svg xmlns="http://www.w3.org/2000/svg" width="${this.w}" height="${this.h}" viewBox="0 0 ${this.w} ${this.h}" font-family="'Pretendard Variable', 'Noto Sans KR', sans-serif" style="font-variant-numeric:tabular-nums">${this.out.join('')}</svg>`; }
 }
 class CanvasDraw {
   constructor(ctx, ox = 0, oy = 0, sc = 1) { this.c = ctx; this.ox = ox; this.oy = oy; this.s = sc; }
@@ -26,7 +27,7 @@ class CanvasDraw {
   rect(x, y, w, h, fill, stroke, sw) { const c = this.c; if (fill) { c.fillStyle = fill; c.fillRect(this.X(x), this.Y(y), w * this.s, h * this.s); } if (stroke) { c.lineWidth = (sw || 1) * this.s; c.strokeStyle = stroke; c.strokeRect(this.X(x), this.Y(y), w * this.s, h * this.s); } }
   circle(cx, cy, r, fill, stroke, sw) { const c = this.c; c.beginPath(); c.arc(this.X(cx), this.Y(cy), r * this.s, 0, Math.PI * 2); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.lineWidth = (sw || 1) * this.s; c.strokeStyle = stroke; c.stroke(); } }
   poly(pts, fill, stroke, sw, close = true) { const c = this.c; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(this.X(p[0]), this.Y(p[1])) : c.moveTo(this.X(p[0]), this.Y(p[1]))); if (close) c.closePath(); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.lineWidth = (sw || 1) * this.s; c.strokeStyle = stroke; c.lineJoin = 'round'; c.stroke(); } }
-  text(x, y, s, size, col, align, weight) { const c = this.c; c.font = `${weight || 400} ${size * this.s}px 'Noto Sans KR', sans-serif`; c.fillStyle = col || INK; c.textAlign = align || 'left'; c.textBaseline = 'middle'; c.fillText(String(s), this.X(x), this.Y(y)); }
+  text(x, y, s, size, col, align, weight) { const c = this.c; c.font = `${weight || 400} ${size * this.s}px 'Noto Sans KR', 'Pretendard Variable', sans-serif`; c.fillStyle = col || INK; c.textAlign = align || 'left'; c.textBaseline = 'middle'; c.fillText(String(s), this.X(x), this.Y(y)); }
 }
 
 /* ---------- 기호 ---------- */
@@ -105,7 +106,7 @@ function drawChart(D, pc, opt, G) {
     if (!ex(r, c)) continue;
     const t = tintAt(r, c);
     if (t && codes[r][c] !== 'bo') D.fillRect(X(c), Y(r), cw, ch, t);
-    if (opt.center && centerOdd && c === cc) D.fillRect(X(c), Y(r), cw, ch, '#FBDDE8');
+    if (opt.center && centerOdd && c === cc) D.fillRect(X(c), Y(r), cw, ch, '#F7DEDF');
   }
   // 2. 가는 격자
   const gsw = Math.max(0.5, cw * 0.045);
@@ -148,6 +149,21 @@ function drawChart(D, pc, opt, G) {
     drawCross(D, v, X(c), Y(r), cw, ch, tintAt(r, c) || PAPER);
     if (cEnd < c + w - 1) D.rect(X(cEnd + 1), Y(r), (c + w - 1 - cEnd) * cw, ch, '#FFFFFF');
   });
+  // 5-1. 완료 단 어둡게, 현재 단 강조
+  D.flush();
+  const xa = X(c0), xb = X(c1 + 1);
+  if (opt.hlRow && opt.dimBelow) {
+    const top = Math.min(opt.hlRow - 1, r1);
+    if (top >= r0) D.fillRect(xa, Y(top), xb - xa, (top - r0 + 1) * ch, DIM_FILL);
+  }
+  if (opt.hlRow && opt.hlRow >= r0 && opt.hlRow <= r1) {
+    D.fillRect(xa, Y(opt.hlRow), xb - xa, ch, HL_FILL);
+    D.flush();
+    const lw = Math.max(1.2, ch * 0.12);
+    D.line(xa - cw * 0.4, Y(opt.hlRow), xb + cw * 0.4, Y(opt.hlRow), lw, RIBLINE);
+    D.line(xa - cw * 0.4, Y(opt.hlRow) + ch, xb + cw * 0.4, Y(opt.hlRow) + ch, lw, RIBLINE);
+  }
+  D.flush();
   // 6. 외곽선
   const osw = Math.max(1.2, cw * 0.12);
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
@@ -240,7 +256,7 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs) {
     D.text(x + (side === 'left' ? -fs * 0.5 : fs * 0.5), (ya + yb) / 2, label, fs, INK, side === 'left' ? 'right' : 'left', 500);
   };
   D.text(bx + pw / 2, by - fs * 4.4, pc.name, fs * 1.25, INK, 'center', 700);
-  for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => D.fillRect(sx(s.l), sy(r), ((s.r - s.l + 1) / gs) * scale + 0.3, scale / gr + 0.3, r <= pc.ribRows ? '#E6D2C4' : '#F4E8DE'));
+  for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => D.fillRect(sx(s.l), sy(r), ((s.r - s.l + 1) / gs) * scale + 0.3, scale / gr + 0.3, r <= pc.ribRows ? '#EAE4DC' : '#FAF7F2'));
   const ex = (r, c) => pc.codes[r] && pc.codes[r][c] !== null && pc.codes[r][c] !== undefined;
   for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => {
     if (!ex(r, s.l - 1)) D.line(sx(s.l), sy(r), sx(s.l), sy(r - 1), lw * 1.4, INK, 'square');
@@ -287,15 +303,22 @@ function drawSchematicPiece(D, C, pc, bx, by, scale, fs) {
   return { w: pw, h: ph };
 }
 function schemPieces(C) { return C.pieces.filter(p => p.kind !== 'lfront'); }
-function schematicSVG(C, availW) {
+function schematicDims(C, availW) {
   const fs = 11, padL = fs * 8, padR = fs * 6, padT = fs * 6, padB = fs * 3.4;
   const list = schemPieces(C);
   const sumW = list.reduce((a, pc) => a + pc.W / C.gs, 0);
   const scale = Math.max(2.2, Math.min(7, (availW - list.length * (padL + padR)) / sumW));
   const w = list.reduce((a, pc) => a + (pc.W / C.gs) * scale + padL + padR, 0);
   const h = Math.max(...list.map(pc => (pc.total / C.gr) * scale)) + padT + padB;
-  const D = new SvgDraw(Math.ceil(w), Math.ceil(h));
+  return { fs, padL, padR, padT, padB, list, scale, w: Math.ceil(w), h: Math.ceil(h) };
+}
+function drawSchematicAll(D, C, dm) {
   let x = 0;
-  list.forEach(pc => { const r = drawSchematicPiece(D, C, pc, x + padL, padT, scale, fs); x += r.w + padL + padR; });
+  dm.list.forEach(pc => { const r = drawSchematicPiece(D, C, pc, x + dm.padL, dm.padT, dm.scale, dm.fs); x += r.w + dm.padL + dm.padR; });
+}
+function schematicSVG(C, availW) {
+  const dm = schematicDims(C, availW);
+  const D = new SvgDraw(dm.w, dm.h);
+  drawSchematicAll(D, C, dm);
   return D.toString();
 }

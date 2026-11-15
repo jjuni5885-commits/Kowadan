@@ -778,7 +778,7 @@ function buildText(P, C) {
   Pp(`${garmentName}. 아래에서 위로 뜨는 조각 뜨기 방식이며, 각 조각을 뜬 뒤 꿰매어 완성합니다.`);
 
   H2('재료');
-  Li(`실: ${g.yarn || '(실 이름 입력)'}${C.yarnG ? `, 약 ${Math.ceil(C.yarnG / 10) * 10}g` + (g.ballW ? ` (${g.ballW}g 볼 ${Math.ceil(C.yarnG / g.ballW)}개)` : '') : ''}`);
+  Li(`실: ${g.yarn || '(실 이름 입력)'}${C.yarnG ? `, 약 ${Math.ceil(C.yarnG / 10) * 10}g` + (g.ballW ? ` (${g.ballW}g 볼 ${Math.ceil(C.yarnG / g.ballW)}개${g.ballLen ? `, 약 ${Math.ceil(C.yarnG / g.ballW * g.ballLen / 10) * 10}m` : ''})` : '') : ''}`);
   Li(`바늘: 몸판 ${g.needle || '-'}mm 대바늘, 고무단 ${g.ribNeedle || '-'}mm 대바늘, 넥밴드용 ${g.ribNeedle || '-'}mm 줄바늘(40cm)`);
   const hasCable = C.pieces.some(p => p.codes.some(row => row && row.some(v => typeof v === 'string' && parseTok(v))));
   Li(`부자재: ${hasCable ? '꽈배기바늘, ' : ''}단수 링, 돗바늘${C.isCard ? `, 단추 ${C.band.nb}개 (지름 1.5cm 내외)` : ''}`);
