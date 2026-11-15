@@ -118,6 +118,9 @@ main{max-width:1180px;margin:0 auto;padding:14px 12px 80px}
 .doc ul{padding-left:20px}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(30px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:24px;opacity:0;transition:.25s;pointer-events:none;z-index:60;font-size:14px;max-width:90vw}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.welcome{border-color:var(--rose);background:#FFFBF8}
+.welcome ol{margin:4px 0 0;padding-left:20px}
+.welcome li{margin:4px 0}
 .modal{position:fixed;inset:0;background:rgba(30,20,16,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
 .modal.on{display:flex}
 .mbox{background:#fff;border-radius:14px;padding:18px;max-width:420px;width:100%}
@@ -1362,8 +1365,13 @@ const Store = {
     renderAll();
     try {
       if (window.claude && window.claude.use) {
-        const db = await window.claude.use('db');
-        if (db) { this.db = db; S.store = 'db'; this.subscribe(); renderHeader(); }
+        // 공유 저장소는 앱 주인과 편집 권한이 있는 사람만 씀. 링크로 받은 사람은 자기 브라우저에 저장.
+        const user = await window.claude.use('user');
+        const editor = user ? await user.canEdit() : false;
+        if (editor) {
+          const db = await window.claude.use('db');
+          if (db) { this.db = db; S.store = 'db'; this.subscribe(); renderHeader(); if (S.tab === 'proj') renderTab(); }
+        }
       }
     } catch (e) { }
     try { if (window.claude && window.claude.use) { S.dl = await window.claude.use('downloads'); if (S.tab === 'print') renderTab(); } } catch (e) { S.dl = null; }
@@ -1559,7 +1567,7 @@ function viewProj() {
     <p class="desc">두 분이 함께 쓰실 수 있도록 작업자를 나눠 둡니다. 저장할 때 현재 작업자 이름이 함께 기록됩니다.</p>
     <div class="chips">${S.workers.map((w, i) => `<span class="chip ${w === S.worker ? 'on' : ''}" data-w="${i}">${esc(w)}</span>`).join('')}</div>
     <div class="row"><input id="wname" placeholder="작업자 이름" class="inp"><button class="btn" id="wadd">추가</button><button class="btn" id="wren">현재 작업자 이름 바꾸기</button></div>
-    <p class="desc small">저장 위치: ${Store.db ? '공유 저장소 (이 도안 앱을 함께 쓰는 사람 모두 볼 수 있음)' : '이 기기 브라우저 (백업은 출력 탭의 JSON 백업 사용)'}</p>
+    <p class="desc small">저장 위치: ${Store.db ? '공유 저장소 (앱 주인과 편집 권한을 받은 사람만 볼 수 있음)' : '지금 쓰는 이 브라우저에만 저장됩니다. 다른 사람은 볼 수 없고, 브라우저 기록을 지우면 사라질 수 있으니 출력 탭의 JSON 백업을 받아 두세요.'}</p>
   </section>
   <section class="card">
     <div class="hrow"><h2>도안 목록</h2>
@@ -1615,9 +1623,19 @@ const BODY_ROWS = [
   ['upperArm', '위팔둘레', '팔에서 가장 굵은 곳의 둘레'],
   ['wrist', '손목둘레', '손목 둘레'],
 ];
+function welcomeHTML() {
+  if (LS.get('welcomed', false)) return '';
+  return `<section class="card welcome"><div class="hrow"><h2>처음 오셨나요?</h2><button class="btn" id="wclose">닫기</button></div>
+  <ol>
+    <li><b>치수</b>: 사이즈 버튼을 누르거나 신체 치수를 넣고, 부위별 여유분과 게이지를 넣습니다.</li>
+    <li><b>디자인</b>: 풀오버나 가디건, 목선, 소매 모양, 꽈배기 무늬 배치를 고릅니다.</li>
+    <li><b>차트, 도식화, 서술형</b>: 결과를 확인합니다. 차트의 단을 누르면 그 단을 글로 읽어 줍니다.</li>
+    <li><b>출력</b>: A4 PDF로 받아 인쇄합니다. 위의 저장 버튼으로 도안을 보관하세요.</li>
+  </ol></section>`;
+}
 function viewSize() {
   const P = S.P;
-  return `
+  return `${welcomeHTML()}
   <div data-live="warn"></div>
   <section class="card">
     <div class="hrow"><h2>신체 치수와 여유분</h2>
@@ -1662,6 +1680,7 @@ function viewSize() {
   <div data-live="summary"></div>`;
 }
 function bindSize() {
+  const wc = $('#wclose'); if (wc) wc.onclick = () => { LS.set('welcomed', true); renderTab(); };
   document.querySelectorAll('[data-preset]').forEach(el => el.onclick = () => {
     const k = el.dataset.preset;
     S.P.size = k;
@@ -1713,7 +1732,7 @@ function viewMotif() {
   return `
   <section class="card">
     <div class="hrow"><h2>무늬 라이브러리</h2><button class="btn pri" id="mnew">새 무늬 그리기</button></div>
-    <p class="desc">기본 무늬는 복제해서 고칠 수 있습니다. 직접 만든 무늬는 ${Store.db ? '공유 저장소에 저장되어 두 분 모두 쓸 수 있습니다' : '이 기기에 저장됩니다'}.</p>
+    <p class="desc">기본 무늬는 복제해서 고칠 수 있습니다. 직접 만든 무늬는 ${Store.db ? '공유 저장소에 저장됩니다' : '이 브라우저에 저장됩니다'}.</p>
     <div class="mgrid">${ms.map(m => {
       const ex = expandMotif(m);
       const cs = Math.max(8, Math.min(14, Math.floor(150 / Math.max(ex.w, 6))));
