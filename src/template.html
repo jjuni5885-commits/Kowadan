@@ -200,6 +200,17 @@ main{max-width:1240px;margin:0 auto;padding:18px 16px 90px}
 .sched .tbl{font-size:13px}
 .sched .tbl td:first-child,.sched .tbl td:last-child{white-space:nowrap}
 
+/* 그레이딩 */
+.gwrap{overflow:auto;border:1px solid var(--line);border-radius:12px;margin:8px 0}
+.grade{font-size:13px}
+.grade th,.grade td{white-space:nowrap}
+.grade td:first-child{font-weight:700;position:sticky;left:0;background:#fff}
+.grade thead th{background:var(--ink);color:#fff;text-align:center}
+.grade thead th:first-child{background:var(--ink)}
+.grade th.cur{background:var(--rose)}
+.grade td.cur{background:var(--rose2)}
+.grade tr.gh td{background:var(--surface-sub);font-weight:700;color:var(--ink)}
+
 /* 서술형 */
 .doc h1{font-family:var(--serif);font-size:26px;letter-spacing:-0.02em;margin:4px 0 8px}
 .doc h2{font-size:18px;border-top:2px solid var(--rose);padding-top:10px;margin:22px 0 8px}

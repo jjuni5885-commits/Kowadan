@@ -31,13 +31,14 @@ function defaultProject() {
     pattern: { bg: 'st', rib: '2x2', center: 'diamond10', side: 'rope6r', gap: 6, sep: 2, applyBack: false, applySleeve: true },
     progress: { back: 1, front: 1, rfront: 1, lfront: 1, sleeve: 1 },
     textDone: [],
+    grading: [],
     memo: '',
   };
 }
 const S = {
   P: defaultProject(), id: null, dirty: false, tab: 'size', piece: 'back',
   chart: { cell: 14, showKnit: true, tint: true, ratio: false, center: true, dim: true },
-  print: { cell: 4, ratio: false, cover: true, schem: true, text: true, motifs: true, charts: true },
+  print: { cell: 4, ratio: false, cover: true, schem: true, grade: true, text: true, motifs: true, charts: true },
   projects: [], motifs: [], workers: ['작업자 1', '작업자 2'], worker: '', filterMine: false,
   C: null, T: null, err: null, editor: null, store: 'local', dl: null, scrolled: {},
 };
@@ -124,6 +125,7 @@ function migrate(p) {
   const out = { ...d, ...p };
   ['body', 'ease', 'design', 'gauge', 'pattern', 'progress'].forEach(k => out[k] = { ...d[k], ...(p[k] || {}) });
   if (!Array.isArray(out.textDone)) out.textDone = [];
+  if (!Array.isArray(out.grading)) out.grading = [];
   return out;
 }
 function saveDraft() { LS.set('draft', { P: S.P, id: S.id, dirty: S.dirty }); }
@@ -832,6 +834,82 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* ===================== 사이즈 그레이딩 ===================== */
+function gradeSizes() {
+  const g = (S.P.grading || []).filter(k => PRESETS[k]);
+  return g.length ? g : [];
+}
+function gradingResults() {
+  return gradeSizes().map(k => {
+    const P2 = JSON.parse(JSON.stringify(S.P));
+    const p = PRESETS[k];
+    Object.keys(P2.body).forEach(f => { if (p[f] !== undefined) P2.body[f] = p[f]; });
+    P2.design.length = p.length;
+    try { return { k, C: compute(P2, allMotifs()) }; } catch (e) { return { k, C: null }; }
+  });
+}
+function gradingRows(res) {
+  const pick = (C, kind) => C.pieces.find(p => p.kind === kind || (kind === 'front' && p.kind === 'rfront'));
+  const yarn = C => C.yarnG ? Math.ceil(C.yarnG / 10) * 10 + 'g' : '-';
+  const rows = [
+    ['완성 치수', null],
+    ['가슴둘레(cm)', C => fmt(C.finished.chest)],
+    ['총장(cm)', C => fmt(C.finished.length)],
+    ['어깨너비(cm)', C => fmt(C.finished.shoulder)],
+    ['진동깊이(cm)', C => fmt(C.finished.armDepth)],
+    ['소매길이(cm)', C => fmt(C.finished.sleeveLen)],
+    ['소매통(cm)', C => fmt(C.finished.upper)],
+    ['뒤판', null],
+    ['코잡기', C => pick(C, 'back').info.Nh + '코'],
+    ['옆선', C => { const s = pick(C, 'back').info.side; return s && s.blocks.length ? `평 ${s.F}단, ${notation(s.blocks)} ${s.kind === 'inc' ? '늘림' : '줄임'}` : '없음'; }],
+    ['가슴 코 수', C => pick(C, 'back').info.Nc + '코'],
+    ['진동', C => C.A > 0 ? notation(pick(C, 'back').info.ahBlocks) : '없음'],
+    ['뒷목 중앙', C => { const n = pick(C, 'back').info.neck; return `${n.center}코, ${notation(n.blocks)}`; }],
+    ['어깨', C => `${C.shSts}코, ${notation(C.shParts.map(a => ({ len: 2, amt: a })))}`],
+    ['총 단 수', C => pick(C, 'back').total + '단'],
+    [C0 => C0.isCard ? '앞판(한쪽)' : '앞판', null],
+    ['코잡기', C => pick(C, 'front').info.Nh + '코'],
+    ['목 시작 단', C => pick(C, 'front').info.neck.s + '단'],
+    ['목 줄임', C => { const n = pick(C, 'front').info.neck; return `${n.center ? '중앙 ' + n.center + '코, ' : ''}${notation(n.blocks)}`; }],
+    ['소매', null],
+    ['코잡기', C => pick(C, 'sleeve').info.Ncuff + '코'],
+    ['늘림', C => { const i = pick(C, 'sleeve').info; return `평 ${i.F}단, ${notation(i.incBlocks)}`; }],
+    ['위팔 코 수', C => pick(C, 'sleeve').info.Nup + '코'],
+    ['소매산', C => { const c = pick(C, 'sleeve').info.cap; return c ? `${notation(c.blocks)}, 남은 ${c.topSts}코` : '없음(드롭숄더)'; }],
+    ['총 단 수', C => pick(C, 'sleeve').total + '단'],
+    ['재료', null],
+    ['실 사용량', yarn],
+  ];
+  const C0 = res.find(x => x.C) && res.find(x => x.C).C;
+  return rows.map(([label, fn]) => {
+    const name = typeof label === 'function' ? (C0 ? label(C0) : '앞판') : label;
+    if (!fn) return { head: name };
+    return { label: name, vals: res.map(x => { try { return x.C ? fn(x.C) : '-'; } catch (e) { return '-'; } }) };
+  });
+}
+function gradingHTML() {
+  const sel = new Set(gradeSizes());
+  const res = gradingResults();
+  const rows = res.length ? gradingRows(res) : [];
+  return `<div class="hrow"><h2>사이즈 그레이딩 표</h2></div>
+    <p class="desc">같은 디자인, 여유분, 게이지로 여러 사이즈를 한 번에 계산합니다. 판매용 도안의 사이즈별 수치표로 쓰세요. 사이즈를 누르면 넣고 뺍니다.</p>
+    <div class="pgroups">${PRESET_GROUPS.map(([g, ks]) => `<div class="pg"><span class="pgl">${g}</span><div class="chips">${ks.map(k => `<span class="chip ${sel.has(k) ? 'on' : ''}" data-grade="${k}">${presetLabel(k)}</span>`).join('')}</div></div>`).join('')}</div>
+    ${res.length ? `<div class="gwrap"><table class="tbl grade"><thead><tr><th></th>${res.map(x => `<th class="${x.k === S.P.size ? 'cur' : ''}">${presetLabel(x.k)}${x.k.startsWith('m') ? ' (남)' : x.k.startsWith('k') ? ' (아동)' : ''}</th>`).join('')}</tr></thead><tbody>
+    ${rows.map(r => r.head ? `<tr class="gh"><td colspan="${res.length + 1}">${esc(r.head)}</td></tr>` : `<tr><td>${esc(r.label)}</td>${r.vals.map((v, i) => `<td class="${res[i].k === S.P.size ? 'cur' : ''}">${esc(v)}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>
+    ${res.some(x => x.C && x.C.warnings.length) ? `<div class="alert"><b>확인이 필요한 사이즈</b><ul>${res.filter(x => x.C && x.C.warnings.length).map(x => `<li>${presetLabel(x.k)}: ${esc(x.C.warnings.join(' '))}</li>`).join('')}</ul></div>` : ''}` : '<p class="desc">사이즈를 두 개 이상 고르면 표가 나옵니다.</p>'}`;
+}
+function bindGrading() {
+  document.querySelectorAll('[data-grade]').forEach(el => el.onclick = () => {
+    const k = el.dataset.grade, cur = new Set(S.P.grading || []);
+    cur.has(k) ? cur.delete(k) : cur.add(k);
+    const order = PRESET_GROUPS.flatMap(([, ks]) => ks);
+    S.P.grading = order.filter(x => cur.has(x));
+    touchQuiet();
+    $('#grading').innerHTML = gradingHTML(); bindGrading();
+  });
+}
+
 /* ===================== 탭: 도식화 ===================== */
 function scheduleRows(pc, C) {
   const out = [];
@@ -904,6 +982,7 @@ function viewSchem() {
     <div class="hrow"><h2>도식화</h2><div class="row"><button class="btn sm" id="spng">도식화 PNG 다운로드</button><button class="btn sm" id="ssvg">SVG 다운로드</button></div></div>
     <div class="schem">${schematicSVG(C, Math.min(window.innerWidth, 1180) - 70)}</div>
   </section>
+  <section class="card" id="grading">${gradingHTML()}</section>
   <section class="card">
     <h2>단수별 일람표</h2>
     <p class="desc">차트에서 코 수가 바뀌거나 좌우로 나뉘는 단만 뽑았습니다. 뜨면서 한 줄씩 확인하세요.</p>
@@ -932,6 +1011,7 @@ function viewSchem() {
 }
 function bindSchem() {
   const C = S.C; if (!C) return;
+  bindGrading();
   const aw = Math.min(window.innerWidth, 1180) - 70;
   $('#ssvg').onclick = () => saveFile(`${safeName(S.P.name)}_도식화.svg`, '<?xml version="1.0" encoding="UTF-8"?>\n' + schematicSVG(C, aw));
   $('#spng').onclick = () => {
@@ -992,7 +1072,7 @@ function viewPrint() {
       <label class="fld"><span class="lb">차트 칸 크기</span><span class="iw"><select id="pcell">${[3, 4, 5, 6].map(v => `<option value="${v}" ${o.cell === v ? 'selected' : ''}>${v}mm</option>`).join('')}</select></span></label>
     </div>
     <div class="row wrap">
-      ${[['cover', '표지와 재료'], ['schem', '도식화'], ['text', '서술형 도안'], ['motifs', '무늬 차트'], ['charts', '조각 차트'], ['ratio', '게이지 비율 칸']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-pr="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
+      ${[['cover', '표지와 재료'], ['schem', '도식화'], ['grade', '사이즈 그레이딩 표'], ['text', '서술형 도안'], ['motifs', '무늬 차트'], ['charts', '조각 차트'], ['ratio', '게이지 비율 칸']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-pr="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
     </div>
     <div class="row wrap"><button class="btn pri big" id="mkpdf" ${C ? '' : 'disabled'}>PDF 저장</button>${IN_CLAUDE ? '' : `<button class="btn big" id="prpdf" ${C ? '' : 'disabled'}>PDF 열어서 인쇄</button>`}<span id="pdfst" class="desc"></span></div>
   </section>
@@ -1196,6 +1276,33 @@ function buildPages(C) {
         drawSchematicPiece(D, C, pc, cx + fs * 8, cy + fs * 6, scale, fs);
       });
     });
+  }
+  if (o.grade && gradeSizes().length >= 2) {
+    const res = gradingResults(), rows = gradingRows(res);
+    const colW0 = 150, colW = (X1 - X0 - colW0) / res.length, lh = 24;
+    const tmp = document.createElement('canvas').getContext('2d'), px = 1240 / PG.W;
+    let items = [], y = Y0 + 46;
+    const pagesG = [];
+    const header = yy => D => {
+      D.fillRect(X0, yy, X1 - X0, lh, '#1C1917');
+      res.forEach((x, i) => D.text(X0 + colW0 + colW * i + colW / 2, yy + lh / 2, presetLabel(x.k) + (x.k.startsWith('m') ? ' (남)' : x.k.startsWith('k') ? ' (아동)' : ''), 12, '#FFFFFF', 'center', 700));
+    };
+    items.push(header(y)); y += lh;
+    rows.forEach(r => {
+      const lines = r.head ? [[r.head]] : r.vals.map(v => wrapLines(tmp, px, v, 11, 400, colW - 10));
+      const h = r.head ? lh : Math.max(...lines.map(l => l.length)) * 16 + 8;
+      if (y + h > Y1) { pagesG.push(items); items = []; y = Y0 + 46; items.push(header(y)); y += lh; }
+      const yy = y;
+      if (r.head) items.push(D => { D.fillRect(X0, yy, X1 - X0, lh, '#F3EFEA'); D.text(X0 + 8, yy + lh / 2, r.head, 12, INK, 'left', 700); });
+      else items.push(D => {
+        D.line(X0, yy + h, X1, yy + h, 0.6, GRID);
+        D.text(X0 + 8, yy + 12, r.label, 11, INK, 'left', 700);
+        lines.forEach((ls, i) => ls.forEach((ln, j) => D.text(X0 + colW0 + colW * i + 5, yy + 12 + j * 16, ln, 11, INK, 'left')));
+      });
+      y += h;
+    });
+    pagesG.push(items);
+    pagesG.forEach((it, i) => pages.push(D => { D.text(X0, Y0 + 14, i ? '사이즈 그레이딩 표 (이어서)' : '사이즈 그레이딩 표', 22, INK, 'left', 700); it.forEach(fn => fn(D)); }));
   }
   if (o.motifs) {
     const used = [];

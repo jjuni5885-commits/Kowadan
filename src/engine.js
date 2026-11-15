@@ -242,6 +242,17 @@ function edgeLen(rows, from, to, side, gs, gr, segPick) {
   return len;
 }
 
+// 꿰매는 선 길이 (cm): 2단 간격으로 이어 계단 모양을 매끈한 선으로 봄. 진동둘레와 소매산 비교용
+function seamLen(rows, from, to, side, gs, gr) {
+  const pos = r => { const segs = rows[r]; if (!segs || !segs.length) return null; const s = side === 'right' ? segs[segs.length - 1] : segs[0]; return side === 'right' ? s.r + 1 : s.l; };
+  const pts = [];
+  for (let r = from; r <= to; r += 2) { const p = pos(r); if (p === null) break; pts.push([r, p]); }
+  const pl = pos(to); if (pl !== null && (!pts.length || pts[pts.length - 1][0] !== to)) pts.push([to, pl]);
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) len += Math.hypot((pts[i][1] - pts[i - 1][1]) / gs, (pts[i][0] - pts[i - 1][0]) / gr);
+  return len + 1 / gr;
+}
+
 /* ---------- 패널 배치 ---------- */
 function makeLayout(pat, motifs, which) {
   // which: 'full' (중앙+양옆), 'center' (중앙만), 'none'
@@ -564,7 +575,7 @@ function compute(P, motifLib) {
   }
 
   // 진동 둘레 (뒤판 오른쪽 가장자리, 진동 시작 ~ 어깨 경사 시작)
-  const ahLen = edgeLen(back.rows, ahStart, shStart - 1, 'right', gs, gr);
+  const ahLen = seamLen(back.rows, ahStart, shStart - 1, 'right', gs, gr);
 
   /* ===== 소매 ===== */
   const cuffRows = rowsOf(d.cuffH);
@@ -639,7 +650,7 @@ function compute(P, motifLib) {
     for (let hc = lo; hc <= hi; hc += 2) {
       const cp = capPlanFor(hc); if (!cp) continue;
       const sb = sleeveBuild(hc, cp.blocks);
-      const capEdge = edgeLen(sb.sim.rows, sb.capStart, sb.total, 'right', gs, gr);
+      const capEdge = seamLen(sb.sim.rows, sb.capStart, sb.total, 'right', gs, gr);
       const topCm = cp.topSts / gs;
       const capTotal = 2 * capEdge + topCm;
       const armTotal = 2 * ahLen;
