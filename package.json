@@ -1,0 +1,12 @@
+{
+  "name": "kowadan",
+  "private": true,
+  "description": "코와단 대바늘 도안 설계 앱",
+  "scripts": {
+    "build": "python3 build.py",
+    "test": "node tests/engine_test.js && node tests/engine_variants.js"
+  },
+  "devDependencies": {
+    "jspdf": "2.5.1"
+  }
+}

@@ -1,0 +1,2171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코와단 대바늘 도안 설계</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F8F3EC; --card:#FFFFFF; --ink:#2A2320; --ink2:#4A3A33; --line:#E5D9CD; --line2:#D3C3B4;
+  --rose:#A23E57; --rose2:#F6E3E8; --sand:#F1E6DA; --amber:#FBE7B0; --warn:#FFF3E0; --warnb:#E2A75A;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.top{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:8px;margin-right:auto}
+.logo{font-family:'Noto Serif KR',serif;font-weight:700;font-size:21px;letter-spacing:1px}
+.sub{font-size:13px;color:#F3DCC9}
+.hdr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pname{background:#3A302B;border:1px solid #5A4A42;color:#fff;border-radius:8px;padding:7px 10px;min-width:160px;width:220px}
+.hdr select{background:#3A302B;border:1px solid #5A4A42;color:#fff;border-radius:8px;padding:7px 8px}
+.tabs{position:sticky;top:57px;z-index:19;display:flex;gap:2px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--line);padding:0 8px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:0 0 auto;border:0;background:none;padding:12px 14px;font-weight:500;color:var(--ink2);border-bottom:3px solid transparent;cursor:pointer}
+.tabs button.on{color:var(--rose);border-bottom-color:var(--rose);font-weight:700}
+main{max-width:1180px;margin:0 auto;padding:14px 12px 80px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.card h2{font-size:17px;margin:0 0 8px;font-weight:700}
+.card h3{font-size:15px;margin:16px 0 6px}
+.desc{margin:4px 0 12px;color:var(--ink2);font-size:14px}
+.desc.small{font-size:13px}
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.row{display:flex;gap:8px;align-items:center;margin:8px 0}
+.row.wrap{flex-wrap:wrap}
+.row.end{justify-content:flex-end}
+.btn{border:1px solid var(--line2);background:#fff;border-radius:9px;padding:8px 14px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--rose)}
+.btn.pri{background:var(--rose);border-color:var(--rose);color:#fff}
+.btn.pri.dirty{box-shadow:0 0 0 3px rgba(242,169,196,.55)}
+.btn.ghost{background:none}
+.btn.big{padding:11px 22px;font-size:16px}
+.btn[disabled]{opacity:.5}
+.btn.file{position:relative;overflow:hidden}
+.btn.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.inp{border:1px solid var(--line2);border-radius:9px;padding:8px 10px;min-width:0;flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line2);border-radius:20px;padding:6px 14px;cursor:pointer;background:#fff;font-weight:500;user-select:none}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 14px}
+.fld{display:flex;flex-direction:column;gap:4px;margin:4px 0}
+.fld.wide{grid-column:1/-1}
+.lb{font-size:13px;font-weight:700;color:var(--ink)}
+.hp{display:block;font-style:normal;font-weight:400;font-size:12px;color:var(--ink2)}
+.iw{display:flex;align-items:center;border:1px solid var(--line2);border-radius:9px;background:#fff;overflow:hidden}
+.iw:focus-within{border-color:var(--rose);box-shadow:0 0 0 3px var(--rose2)}
+.iw input,.iw select{border:0;outline:0;padding:9px 10px;width:100%;background:transparent;min-width:0}
+.iw em{font-style:normal;padding:0 10px;font-size:13px;color:var(--ink2);white-space:nowrap}
+.seg{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line2);border-radius:10px;overflow:hidden;width:max-content;max-width:100%}
+.seg button{border:0;border-right:1px solid var(--line2);background:#fff;padding:8px 14px;cursor:pointer;font-weight:500}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--rose);color:#fff}
+.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-right:10px;font-size:14px}
+.chk input{width:18px;height:18px;accent-color:var(--rose)}
+.mtable{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.mh,.mr{display:grid;grid-template-columns:1.6fr 1fr 1fr .8fr;gap:8px;align-items:center;padding:8px 12px}
+.mh{background:var(--sand);font-weight:700;font-size:13px}
+.mr{border-top:1px solid var(--line)}
+.mr input{width:100%;border:1px solid var(--line2);border-radius:8px;padding:8px;background:#fff}
+.mr input:focus{outline:0;border-color:var(--rose);box-shadow:0 0 0 3px var(--rose2)}
+.mn{font-weight:700;font-size:14px}
+.mn i{display:block;font-style:normal;font-weight:400;font-size:12px;color:var(--ink2);line-height:1.35}
+.mt{font-weight:700;font-size:16px;text-align:right;color:var(--rose)}
+.alert{background:var(--warn);border:1px solid var(--warnb);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
+.alert ul{margin:4px 0 0;padding-left:18px}
+.ok{background:var(--rose2);border-radius:10px;padding:8px 12px;font-size:14px;margin:8px 0}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;background:var(--ink);color:#fff;border-radius:14px;padding:14px 18px}
+.sum div{display:flex;flex-direction:column;font-size:18px;font-weight:700}
+.sum b{font-size:12px;font-weight:500;color:#F3DCC9}
+.plist{display:flex;flex-direction:column;gap:8px}
+.pitem{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.pitem.cur{border-color:var(--rose);background:#FFF9FA}
+.pinfo{display:flex;flex-direction:column;font-size:13px}
+.pinfo b{font-size:15px}
+.pact{display:flex;gap:6px}
+.memo{width:100%;min-height:110px;border:1px solid var(--line2);border-radius:10px;padding:10px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.mcard{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.mhead{display:flex;flex-direction:column}
+.mhead span{font-size:12px;color:var(--ink2)}
+.mimg{overflow:auto;max-height:260px;background:#fff}
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:8px 0}
+.pal button{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);background:#fff;border-radius:9px;padding:5px 8px;cursor:pointer;text-align:left;font-size:12px;line-height:1.3}
+.pal button.on{border-color:var(--rose);background:var(--rose2);font-weight:700}
+.pal svg{flex:0 0 auto}
+.ecanvas{overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff;cursor:crosshair}
+.rows{font-size:13px;padding-left:20px}
+.ctl{gap:4px 12px}
+.zoom{display:flex;align-items:center;gap:6px;font-size:14px}
+.chartbox{overflow:auto;max-height:78vh;border:1px solid var(--line);border-radius:10px;background:#fff;padding:6px;cursor:pointer}
+.chartbox svg{display:block}
+.rowtxt{font-size:14px;background:var(--sand);border-radius:10px;padding:0 12px;margin:6px 0}
+.rowtxt:not(:empty){padding:8px 12px}
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 14px}
+.lg{display:flex;align-items:center;gap:8px;font-size:13px}
+.lg svg{flex:0 0 auto}
+.schem{overflow:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th,.tbl td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+.tbl th{background:var(--sand)}
+.doc h1{font-family:'Noto Serif KR',serif;font-size:24px;margin:4px 0 8px}
+.doc h2{font-size:18px;border-top:2px solid var(--rose);padding-top:10px;margin:22px 0 8px}
+.doc h3{font-size:15px}
+.doc p,.doc li{font-size:15px}
+.doc ul{padding-left:20px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(30px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:24px;opacity:0;transition:.25s;pointer-events:none;z-index:60;font-size:14px;max-width:90vw}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.modal{position:fixed;inset:0;background:rgba(30,20,16,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal.on{display:flex}
+.mbox{background:#fff;border-radius:14px;padding:18px;max-width:420px;width:100%}
+@media (max-width:640px){
+  body{font-size:14px}
+  .top{padding:8px 12px;gap:8px}
+  .sub{display:none}
+  .pname{width:130px;min-width:0}
+  .top{position:static}
+  .tabs{top:0}
+  .card{padding:14px 12px;border-radius:12px}
+  .mh,.mr{grid-template-columns:1.3fr 1fr 1fr .7fr;padding:8px}
+  .mn i{display:none}
+  .grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+/* ===================== 코와단 도안 엔진 ===================== */
+const even = x => 2 * Math.round(x / 2);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const r1 = x => Math.round(x * 10) / 10;
+const fmt = x => { const v = r1(x); return Number.isInteger(v) ? String(v) : v.toFixed(1); };
+
+/* ---------- 기호 정의 ---------- */
+const STITCH = {
+  k: { name: '겉뜨기', ws: '안뜨기', how: '바늘을 코의 앞쪽에서 넣어 겉뜨기합니다.' },
+  p: { name: '안뜨기', ws: '겉뜨기', how: '실을 앞에 두고 안뜨기합니다.' },
+  tk: { name: '꼬아뜨기', ws: '꼬아 안뜨기', how: '코의 뒤쪽 고리에 바늘을 넣어 겉뜨기합니다.' },
+  yo: { name: '바늘비우기', ws: '바늘비우기', how: '실을 오른바늘에 한 번 감아 1코를 만듭니다.' },
+  k2tog: { name: '왼코 겹치기', ws: '안면 2코 모아 안뜨기', how: '2코에 한꺼번에 바늘을 넣어 겉뜨기합니다. 오른쪽으로 기울어집니다.' },
+  ssk: { name: '오른코 겹치기', ws: '안면 오른코 겹치기', how: '2코를 1코씩 겉뜨기 방향으로 옮긴 뒤 왼바늘로 되돌려 뒤쪽 고리로 함께 겉뜨기합니다. 왼쪽으로 기울어집니다.' },
+  sk2p: { name: '중심 3코 모아뜨기', ws: '안면 3코 모아뜨기', how: '2코를 함께 겉뜨기 방향으로 옮기고 다음 코를 겉뜨기한 뒤 옮긴 2코를 덮어씌웁니다.' },
+  mb: { name: '방울뜨기', ws: '방울뜨기', how: '1코에 겉뜨기, 바늘비우기, 겉뜨기, 바늘비우기, 겉뜨기를 하여 5코를 만들고 4단 왕복한 뒤 5코를 1코로 모읍니다.' },
+  bo: { name: '덮어씌우기', ws: '덮어씌우기', how: '2코를 뜨고 오른쪽 코를 왼쪽 코에 덮어씌우는 것을 반복합니다.' },
+  sr: { name: '되돌아뜨기 남김코', ws: '되돌아뜨기 남김코', how: '단 끝까지 뜨지 않고 지정한 코 수를 남긴 채 편물을 돌립니다. 마지막에 남긴 코를 모두 한 번에 뜬 뒤 쉼코로 둡니다.' },
+  m1r: { name: '오른코 늘리기', ws: '오른코 늘리기', how: '코와 코 사이의 가로실을 뒤에서 앞으로 걸어 올려 꼬아서 겉뜨기합니다.' },
+  m1l: { name: '왼코 늘리기', ws: '왼코 늘리기', how: '코와 코 사이의 가로실을 앞에서 뒤로 걸어 올려 뒤쪽 고리로 겉뜨기합니다.' },
+};
+
+function parseTok(t) {
+  if (typeof t !== 'string') return null;
+  const m = /^(L|R)(P?)C(\d)\/(\d)$/.exec(t);
+  if (!m) return null;
+  return { side: m[1], purl: m[2] === 'P', a: +m[3], b: +m[4], w: +m[3] + +m[4] };
+}
+function tokW(t) { const x = parseTok(t); return x ? x.w : 1; }
+function crossName(t) {
+  const x = parseTok(t); if (!x) return STITCH[t] ? STITCH[t].name : t;
+  const top = x.side === 'L' ? '오른코 위' : '왼코 위';
+  if (x.a === x.b && !x.purl) return `${top} ${x.a}코 교차뜨기`;
+  return `${top} ${x.a}코와 ${x.b}코 교차뜨기${x.purl ? '(아래 안뜨기)' : ''}`;
+}
+function crossHow(t) {
+  const x = parseTok(t);
+  const u = x.purl ? '안뜨기' : '겉뜨기';
+  if (x.side === 'L') return `꽈배기바늘에 ${x.a}코를 옮겨 편물 앞쪽에 두고, 다음 ${x.b}코를 ${u}한 뒤 꽈배기바늘의 ${x.a}코를 겉뜨기합니다.`;
+  return `꽈배기바늘에 ${x.b}코를 옮겨 편물 뒤쪽에 두고, 다음 ${x.a}코를 겉뜨기한 뒤 꽈배기바늘의 ${x.b}코를 ${u}합니다.`;
+}
+function symName(t) { return parseTok(t) ? crossName(t) : (STITCH[t] ? STITCH[t].name : t); }
+// 교차 후 j번째 칸(왼쪽부터)의 결과 코
+function crossOut(t, j) {
+  const x = parseTok(t);
+  if (x.side === 'L') return j < x.a ? 'k' : (x.purl ? 'p' : 'k');
+  return j < x.b ? (x.purl ? 'p' : 'k') : 'k';
+}
+
+/* ---------- 무늬 라이브러리 ---------- */
+function R(str) { // 'p*3 LC2/2 p*3' -> tokens
+  const out = [];
+  str.trim().split(/\s+/).forEach(s => {
+    const m = /^(.+)\*(\d+)$/.exec(s);
+    if (m) for (let i = 0; i < +m[2]; i++) out.push(m[1]); else out.push(s);
+  });
+  return out;
+}
+function rep(str, n) { return Array.from({ length: n }, () => R(str)); }
+
+const BUILTIN_MOTIFS = [
+  { id: 'rope6r', name: '6코 꽈배기(오른코 위)', cat: '꽈배기', rows: [R('LC3/3'), ...rep('k*6', 7)] },
+  { id: 'rope6l', name: '6코 꽈배기(왼코 위)', cat: '꽈배기', rows: [R('RC3/3'), ...rep('k*6', 7)] },
+  { id: 'rope4r', name: '4코 꽈배기(오른코 위)', cat: '꽈배기', rows: [R('LC2/2'), ...rep('k*4', 3)] },
+  { id: 'rope4l', name: '4코 꽈배기(왼코 위)', cat: '꽈배기', rows: [R('RC2/2'), ...rep('k*4', 3)] },
+  { id: 'rope8r', name: '8코 꽈배기(오른코 위)', cat: '꽈배기', rows: [R('LC4/4'), ...rep('k*8', 9)] },
+  { id: 'horse12', name: '말굽 꽈배기 12코', cat: '꽈배기', rows: [R('LC3/3 RC3/3'), ...rep('k*12', 7)] },
+  { id: 'plait9', name: '세 가닥 땋기 9코', cat: '꽈배기', rows: [R('k*3 LC3/3'), ...rep('k*9', 3), R('RC3/3 k*3'), ...rep('k*9', 3)] },
+  { id: 'honey8', name: '벌집 꽈배기 8코', cat: '꽈배기', rows: [R('RC2/2 LC2/2'), ...rep('k*8', 3), R('LC2/2 RC2/2'), ...rep('k*8', 3)] },
+  {
+    id: 'diamond10', name: '다이아몬드 꽈배기 10코', cat: '이동 꽈배기', rows: [
+      R('p*3 LC2/2 p*3'), R('p*3 k*4 p*3'),
+      R('p*2 LPC2/1 RPC2/1 p*2'), R('p*2 k*2 p*2 k*2 p*2'),
+      R('p LPC2/1 p*2 RPC2/1 p'), R('p k*2 p*4 k*2 p'),
+      R('LPC2/1 p*4 RPC2/1'), R('k*2 p*6 k*2'),
+      R('RPC2/1 p*4 LPC2/1'), R('p k*2 p*4 k*2 p'),
+      R('p RPC2/1 p*2 LPC2/1 p'), R('p*2 k*2 p*2 k*2 p*2'),
+      R('p*2 RPC2/1 LPC2/1 p*2'), R('p*3 k*4 p*3'),
+      R('p*3 k*4 p*3'), R('p*3 k*4 p*3'),
+    ]
+  },
+  { id: 'twist2', name: '잔꽈배기 2코', cat: '꽈배기', rows: [R('LC1/1'), R('k*2')] },
+  { id: 'bobble5', name: '방울 무늬 5코', cat: '방울', rows: [R('p*2 mb p*2'), R('p*2 k p*2'), ...rep('p*5', 4)] },
+  { id: 'eyelet7', name: '비침 다이아 7코', cat: '비침', rows: [
+      R('k*7'), R('p*7'), R('k*2 k2tog yo k*3'), R('p*7'), R('k k2tog yo k yo ssk k'), R('p*7'),
+      R('k2tog yo k*3 yo ssk'), R('p*7'), R('k yo ssk k k2tog yo k'), R('p*7'), R('k*2 yo sk2p yo k*2'), R('p*7')] },
+];
+
+function mirrorTok(t) {
+  const x = parseTok(t);
+  if (x) return `${x.side === 'L' ? 'R' : 'L'}${x.purl ? 'P' : ''}C${x.a}/${x.b}`;
+  return ({ k2tog: 'ssk', ssk: 'k2tog', m1l: 'm1r', m1r: 'm1l' })[t] || t;
+}
+function mirrorMotif(m) {
+  const nm = /오른코|왼코/.test(m.name) ? m.name.replace(/오른코|왼코/g, x => x === '오른코' ? '왼코' : '오른코') : m.name + ' (대칭)';
+  return { ...m, id: m.id + '~m', name: nm, rows: m.rows.map(row => row.slice().reverse().map(mirrorTok)) };
+}
+// 무늬 -> 칸 그리드 [r][c] : 문자열 또는 {tok,j}
+function expandMotif(m) {
+  const cells = m.rows.map(row => {
+    const out = [];
+    row.forEach(t => {
+      const x = parseTok(t);
+      if (x) for (let j = 0; j < x.w; j++) out.push({ tok: t, j });
+      else out.push(t);
+    });
+    return out;
+  });
+  const w = Math.max(...cells.map(r => r.length));
+  return { w, h: cells.length, cells };
+}
+function motifCheck(m) {
+  const e = expandMotif(m), errs = [];
+  e.cells.forEach((row, i) => {
+    if (row.length !== e.w) errs.push(`${i + 1}단의 코 수(${row.length})가 무늬 폭(${e.w})과 다릅니다.`);
+    let bal = 0;
+    m.rows[i].forEach(t => { if (t === 'yo') bal++; if (t === 'k2tog' || t === 'ssk') bal--; if (t === 'sk2p') bal -= 2; });
+    if (bal !== 0) errs.push(`${i + 1}단의 늘림과 줄임이 맞지 않습니다(${bal > 0 ? '+' : ''}${bal}코).`);
+    if (i % 2 === 1 && m.rows[i].some(t => parseTok(t))) errs.push(`${i + 1}단(안면)에 교차뜨기가 있습니다. 교차는 겉면 단(홀수 단)에 두세요.`);
+  });
+  return errs;
+}
+
+/* ---------- 줄임/늘림 배분 (단-코-회) ---------- */
+function distribute(H, n) { // H단 동안 n회, 간격은 짝수
+  if (n <= 0) return [];
+  let lo = Math.max(2, 2 * Math.floor(H / n / 2));
+  if (lo * n > H) return Array(n).fill(2);
+  const rem = H - lo * n;
+  const y = Math.min(n, Math.floor(rem / 2));
+  return [...Array(y).fill(lo + 2), ...Array(n - y).fill(lo)];
+}
+function mergeToFit(total, maxEvents, firstMin) { // 코 수를 횟수 한도에 맞게 묶음
+  const a = Array(Math.max(0, total)).fill(1);
+  if (firstMin && a.length >= firstMin + 1) { a.splice(0, firstMin, firstMin); }
+  while (a.length > Math.max(1, maxEvents)) { const x = a.shift(); a[0] += x; }
+  // 앞이 더 크게 정렬
+  return a;
+}
+function neckSide(fs, maxEv) { // 둥근 목선 한쪽 줄임 코 배열 (큰 것부터)
+  const a = []; let rem = fs;
+  if (rem >= 8) { a.push(3); rem -= 3; }
+  if (rem >= 5) { a.push(2); rem -= 2; }
+  while (rem > 0) { a.push(1); rem--; }
+  maxEv = Math.max(1, maxEv);
+  while (a.length > maxEv) {
+    a.pop();
+    let k = 0;
+    for (let i = 1; i < a.length; i++) if (a[i] < a[i - 1]) { k = i; break; }
+    a[k]++;
+  }
+  return a;
+}
+// 블록 -> 표기 "2-3-1, 2-1-4"
+function notation(blocks) {
+  const g = [];
+  blocks.forEach(b => {
+    const last = g[g.length - 1];
+    if (last && last.len === b.len && last.amt === b.amt) last.t++;
+    else g.push({ len: b.len, amt: b.amt, t: 1 });
+  });
+  return g.map(x => `${x.len}-${x.amt}-${x.t}`).join(', ');
+}
+
+/* ---------- 조각 시뮬레이터 ---------- */
+// ops[row] = [{seg:'main'|'L'|'R', edge:'left'|'right', type:'bo'|'dec'|'inc'|'sr', n}]
+function simulate(W, l0, r0, total, ops, splits) {
+  let segs = { main: { l: l0, r: r0 } }, split = false;
+  const rows = [], marks = new Map();
+  const mk = (r, c, code) => marks.set(r * 10000 + c, code);
+  const resolve = op => {
+    if (!split) return segs.main;
+    if (op.seg === 'main') return op.edge === 'left' ? segs.L : segs.R;
+    return segs[op.seg];
+  };
+  for (let r = 1; r <= total; r++) {
+    const rowOps = ops[r] || [];
+    rowOps.filter(o => o.type === 'inc').forEach(o => {
+      const s = resolve(o); if (!s || s.l > s.r) return;
+      for (let i = 0; i < o.n; i++) {
+        if (o.edge === 'left') { s.l--; mk(r, s.l + 1, 'm1l'); } else { s.r++; mk(r, s.r - 1, 'm1r'); }
+      }
+    });
+    const live = Object.entries(segs).filter(([, s]) => s.l <= s.r).map(([k, s]) => ({ name: k, l: s.l, r: s.r }));
+    if (!live.length) break;
+    rows[r] = live;
+    const after = [];
+    rowOps.filter(o => o.type !== 'inc').forEach(o => {
+      const s = resolve(o); if (!s || s.l > s.r) return;
+      const n = Math.min(o.n, s.r - s.l + 1);
+      if (o.type === 'dec') {
+        if (o.edge === 'left') { mk(r, Math.min(s.l + 1, s.r), 'k2tog'); after.push(() => { s.l += 1; }); }
+        else { mk(r, Math.max(s.r - 1, s.l), 'ssk'); after.push(() => { s.r -= 1; }); }
+      } else { // bo / sr
+        const code = o.type === 'sr' ? 'sr' : 'bo';
+        if (o.edge === 'left') { for (let c = s.l; c < s.l + n; c++) mk(r, c, code); after.push(() => { s.l += n; }); }
+        else { for (let c = s.r - n + 1; c <= s.r; c++) mk(r, c, code); after.push(() => { s.r -= n; }); }
+      }
+    });
+    if (splits[r] && !split) {
+      const sp = splits[r];
+      for (let c = sp.a; c <= sp.b; c++) mk(r, c, 'bo');
+      after.push(() => {
+        const m = segs.main;
+        segs = { L: { l: m.l, r: sp.a - 1 }, R: { l: sp.b + 1, r: m.r } };
+        split = true;
+      });
+    }
+    after.forEach(f => f());
+  }
+  const left = Object.values(segs).reduce((a, s) => a + Math.max(0, s.r - s.l + 1), 0);
+  return { rows, marks, left };
+}
+function addEvents(ops, events, edges) {
+  // events: [{row, amt, kind}] ; edges: [{seg, edge}]
+  events.forEach(ev => {
+    edges.forEach(e => {
+      let type = ev.kind, row = ev.row;
+      if (type === 'dec' && ev.amt >= 2) type = 'bo';
+      if ((type === 'bo' || type === 'sr') && e.edge === 'left') row = ev.row + 1;
+      (ops[row] = ops[row] || []).push({ seg: e.seg, edge: e.edge, type, n: ev.amt });
+    });
+  });
+}
+function blocksToEvents(start, blocks, kind) {
+  let row = start; const ev = [];
+  blocks.forEach(b => { ev.push({ row, amt: b.amt, kind: b.kind || kind }); row += b.len; });
+  return ev;
+}
+function edgeLen(rows, from, to, side, gs, gr, segPick) {
+  // 가장자리 길이 (cm): side 'right' or 'left'
+  let len = 0, prev = null;
+  for (let r = from; r <= to; r++) {
+    const segs = rows[r]; if (!segs) break;
+    const s = segPick ? segPick(segs) : (side === 'right' ? segs[segs.length - 1] : segs[0]);
+    if (!s) break;
+    const pos = side === 'right' ? s.r + 1 : s.l;
+    if (prev !== null) len += Math.hypot((pos - prev) / gs, 1 / gr); else len += 1 / gr;
+    prev = pos;
+  }
+  return len;
+}
+
+/* ---------- 패널 배치 ---------- */
+function makeLayout(pat, motifs, which) {
+  // which: 'full' (중앙+양옆), 'center' (중앙만), 'none'
+  const get = id => motifs.find(m => m.id === id);
+  const blocks = [];
+  const M0 = which !== 'none' && pat.center ? get(pat.center) : null;
+  const M1 = which === 'full' && pat.side ? get(pat.side) : null;
+  const sep = pat.sep || 0, gap = pat.gap || 0;
+  const mBlock = (m, mir) => ({ type: 'motif', motif: mir ? mirrorMotif(m) : m, w: expandMotif(m).w });
+  const sepB = () => sep ? [{ type: 'purl', w: sep }] : [];
+  const center = M0 ? [...sepB(), mBlock(M0, false), ...sepB()] : [];
+  if (M1) {
+    const leftSide = [...sepB(), mBlock(M1, true), ...sepB(), { type: 'bg', w: M0 ? gap : Math.ceil(gap / 2) }];
+    const rightSide = [{ type: 'bg', w: M0 ? gap : Math.floor(gap / 2) }, ...sepB(), mBlock(M1, false), ...sepB()];
+    blocks.push(...leftSide, ...center, ...rightSide);
+  } else blocks.push(...center);
+  const panelW = blocks.reduce((a, b) => a + b.w, 0);
+  const cableSts = blocks.filter(b => b.type === 'motif' && b.motif.rows.some(r => r.some(t => parseTok(t)))).reduce((a, b) => a + b.w, 0);
+  return { blocks, panelW, cableSts };
+}
+function layoutWidthCm(lay, gs, dens) { return lay.cableSts / (gs * dens) + (lay.panelW - lay.cableSts) / gs; }
+function stsFor(cm, lay, gs, dens) {
+  const bg = (cm - layoutWidthCm(lay, gs, dens)) * gs;
+  const bgE = Math.max(2, even(bg));
+  return lay.panelW + bgE;
+}
+function cmFor(n, lay, gs, dens) { return (n - lay.panelW) / gs + layoutWidthCm(lay, gs, dens); }
+
+/* ---------- 고무단 / 바탕 ---------- */
+function ribCode(type, c, center, odd, r) {
+  if (type === 'garter') return r % 2 === 1 ? 'k' : 'p';
+  const i = Math.floor(Math.abs(c - center) + 1e-9);
+  const knit = type === '2x2' ? (odd ? Math.floor(i / 2) % 2 === 0 : (i === 0 || Math.floor((i - 1) / 2) % 2 === 1)) : i % 2 === 0;
+  if (!knit) return 'p';
+  return type === '1x1t' ? 'tk' : 'k';
+}
+function bgCode(type, r, c) {
+  if (type === 'rev') return 'p';
+  if (type === 'seed') return (r + c) % 2 === 0 ? 'k' : 'p';
+  if (type === 'garter') return r % 2 === 1 ? 'k' : 'p';
+  return 'k';
+}
+const BG_NAME = { st: '메리야스뜨기', rev: '안메리야스뜨기', seed: '멍석뜨기', garter: '가터뜨기' };
+const RIB_NAME = { '1x1': '1코 고무뜨기', '2x2': '2코 고무뜨기', '1x1t': '1코 꼬아 고무뜨기', garter: '가터뜨기' };
+
+/* ---------- 조각 -> 칸 코드 ---------- */
+function fillPiece(pc, opt) {
+  const { W, rows, marks, ribRows, ribType, bg, placements, finalBo } = pc;
+  const total = rows.length - 1;
+  const codes = [];
+  const center = (W - 1) / 2;
+  const first = rows[1] ? rows[1][0] : { l: 0, r: W - 1 };
+  const ribCenter = (first.l + rows[1][rows[1].length - 1].r) / 2;
+  const ribOdd = ((rows[1][rows[1].length - 1].r - first.l + 1) % 2) === 1;
+  for (let r = 1; r <= total; r++) {
+    const row = Array(W).fill(null);
+    (rows[r] || []).forEach(s => {
+      for (let c = s.l; c <= s.r; c++) {
+        let code;
+        if (r <= ribRows) code = (c === s.l || c === s.r) ? 'k' : ribCode(ribType, c, ribCenter, ribOdd, r);
+        else if (c === s.l || c === s.r) code = 'k';
+        else {
+          code = bgCode(bg, r, c);
+          for (const p of placements) {
+            if (c >= p.x0 && c < p.x0 + p.w && r >= p.y0) {
+              if (p.kind === 'purl') { code = 'p'; break; }
+              if (p.kind === 'bg') break;
+              const mr = (r - p.y0) % p.ex.h;
+              const cell = p.ex.cells[mr][c - p.x0];
+              code = typeof cell === 'object' ? { ...cell } : cell;
+              break;
+            }
+          }
+        }
+        row[c] = code;
+      }
+    });
+    codes[r] = row;
+  }
+  marks.forEach((code, key) => {
+    const r = Math.floor(key / 10000), c = key % 10000;
+    if (codes[r] && codes[r][c] !== null && codes[r][c] !== undefined) codes[r][c] = code;
+  });
+  if (finalBo) { const r = total; codes[r] = codes[r].map(v => v === null ? null : 'bo'); }
+  // 교차 검증
+  const segOf = (r, c) => (rows[r] || []).find(s => c >= s.l && c <= s.r);
+  for (let r = 1; r <= total; r++) {
+    const row = codes[r];
+    for (let c = 0; c < W; c++) {
+      const v = row[c];
+      if (v && typeof v === 'object') {
+        const x = parseTok(v.tok);
+        let ok = v.j === 0 && r % 2 === 1;
+        const sg = segOf(r, c);
+        if (ok) for (let j = 1; j < x.w; j++) {
+          const u = row[c + j];
+          if (!(u && typeof u === 'object' && u.tok === v.tok && u.j === j) || !sg || c + j > sg.r) { ok = false; break; }
+        }
+        if (ok && sg && (c === sg.l || c + x.w - 1 === sg.r)) ok = false;
+        if (ok) { row[c] = v.tok; for (let j = 1; j < x.w; j++) row[c + j] = '>'; c += x.w - 1; }
+        else row[c] = crossOut(v.tok, v.j);
+      }
+    }
+  }
+  pc.codes = codes;
+  pc.total = total;
+  return pc;
+}
+
+/* ---------- 메인 계산 ---------- */
+function compute(P, motifLib) {
+  const W_ = [], notes = [];
+  const warn = s => W_.push(s);
+  const gs = P.gauge.unit === '10cm' ? P.gauge.st / 10 : P.gauge.st;
+  const gr = P.gauge.unit === '10cm' ? P.gauge.row / 10 : P.gauge.row;
+  const dens = P.gauge.dens || 1.2;
+  const b = P.body, e = P.ease, d = P.design, pat = P.pattern;
+  const isCard = P.garment === 'cardigan';
+  const isV = P.neck === 'v';
+  const isDrop = P.sleeve === 'drop';
+  const rowsOf = cm => Math.max(2, even(cm * gr));
+
+  // 완성 목표 치수
+  const T = {
+    chest: b.chest + e.chest, hip: b.hip + e.hip, shoulder: b.shoulder + e.shoulder,
+    armDepth: b.armDepth + e.armDepth, neckW: b.neckW + e.neckW, armLen: b.armLen + e.armLen,
+    upper: b.upperArm + e.upperArm, wrist: b.wrist + e.wrist, length: d.length,
+  };
+  if (T.neckW >= T.shoulder - 6) warn('목너비가 어깨너비에 비해 너무 넓습니다. 어깨 코가 부족할 수 있습니다.');
+  if (T.shoulder > T.chest / 2 && !isDrop) warn('어깨너비가 가슴 반둘레보다 넓습니다. 드롭숄더를 고려하세요.');
+
+  const layFull = makeLayout(pat, motifLib, 'full');
+  const layBack = makeLayout(pat, motifLib, pat.applyBack ? 'full' : 'none');
+  const layOne = makeLayout(pat, motifLib, 'center');
+  const laySleeve = makeLayout(pat, motifLib, pat.applySleeve ? 'center' : 'none');
+  const layFront = isCard ? layOne : layFull;
+
+  const ribRows = rowsOf(d.ribH);
+  const ahRows = rowsOf(T.armDepth);
+  const totalRows = rowsOf(T.length);
+  const sideRows = totalRows - ribRows - ahRows;
+  if (sideRows < 10) warn('총장이 너무 짧아 옆선 길이가 부족합니다.');
+
+  const pieces = [];
+  const shoulderKind = d.shoulderMethod === 'sr' ? 'sr' : 'bo';
+
+  // ---- 몸판 공통 계산 ----
+  function bodyPlan(lay, halfFactor, label) {
+    // halfFactor: 1 => 앞/뒤판 전체 폭(반둘레), 0.5 => 가디건 한쪽
+    const bandHalf = isCard && halfFactor === 0.5 ? d.bandW / 2 : 0;
+    const wChest = T.chest / 2 * halfFactor - bandHalf;
+    const wHip = T.hip / 2 * halfFactor - bandHalf;
+    const Nc = stsFor(wChest, lay, gs, dens);
+    let Nh = stsFor(wHip, lay, gs, dens);
+    return { Nc, Nh, wChest, wHip };
+  }
+  // 뒤판 기준 어깨/진동 코 계산
+  const backP = bodyPlan(layBack, 1);
+  const shoulderBase = isDrop ? cmFor(backP.Nc, layBack, gs, dens) : T.shoulder;
+  const shSts = Math.max(4, Math.round(((shoulderBase - T.neckW) / 2) * gs));
+  let NshBack = isDrop ? backP.Nc : stsFor(T.shoulder, layBack, gs, dens);
+  if (NshBack > backP.Nc) NshBack = backP.Nc;
+  const A = (backP.Nc - NshBack) / 2; // 진동 줄임 코 (한쪽)
+  const neckStsBack = NshBack - 2 * shSts;
+  if (neckStsBack < 6) warn('목 코 수가 너무 적습니다. 목너비나 어깨너비를 확인하세요.');
+
+  // 진동 단계
+  function armholeBlocks(A) {
+    const out = []; let rem = A;
+    if (rem <= 0) return out;
+    if (rem >= 4) { const b0 = clamp(Math.round(A * 0.35), 2, 6); out.push({ len: 2, amt: b0, kind: 'bo' }); rem -= b0; }
+    if (rem >= 5) { out.push({ len: 2, amt: 2, kind: 'bo' }); rem -= 2; }
+    let ones = 0;
+    while (rem > 0) { out.push({ len: ones < 6 ? 2 : 4, amt: 1, kind: 'dec' }); ones++; rem--; }
+    return out;
+  }
+  const ahBlocks = armholeBlocks(A);
+  const ahStart = ribRows + sideRows + 1;
+  const ahUsed = ahBlocks.reduce((a, x) => a + x.len, 0);
+
+  // 어깨 단계
+  const sdRows = rowsOf(d.shoulderDrop);
+  const kSteps = clamp(Math.round(sdRows / 2), 2, Math.min(4, shSts));
+  const shParts = Array.from({ length: kSteps }, (_, i) => Math.floor(shSts / kSteps) + (i < shSts % kSteps ? 1 : 0));
+  const shStart = totalRows - 2 * kSteps + 1;
+  if (ahStart + ahUsed > shStart - 4) warn('진동 줄임이 어깨 경사와 겹칩니다. 진동깊이를 늘리거나 어깨너비를 넓히세요.');
+
+  // 옆선 쉐이핑(밑단 -> 가슴)
+  function sideShaping(Nh, Nc, oneSide) {
+    const dd = oneSide ? (Nc - Nh) : (Nc - Nh) / 2;
+    if (dd === 0) return { events: [], blocks: [], F: 0, kind: null, n: 0 };
+    const F = Math.min(rowsOf(4), Math.max(0, sideRows - 4));
+    const H = Math.max(2, sideRows - F - rowsOf(3));
+    const iv = distribute(H, Math.abs(dd));
+    if (iv.reduce((a, x) => a + x, 0) > H) warn('밑단과 가슴 폭 차이가 커서 옆선 쉐이핑 간격이 2단으로 촘촘합니다.');
+    const blocks = iv.map(len => ({ len, amt: 1 }));
+    return { blocks, F, kind: dd > 0 ? 'inc' : 'dec', n: Math.abs(dd) };
+  }
+
+  // 목 줄임 계산
+  function roundNeck(neckSts, depthRows) {
+    const maxEv = Math.max(1, Math.floor((depthRows - 4) / 2));
+    let fs = Math.round(neckSts * 0.33);
+    let center = neckSts - 2 * fs;
+    if (center < 2) { fs = Math.floor((neckSts - 2) / 2); center = neckSts - 2 * fs; }
+    const amts = neckSide(fs, maxEv);
+    return { center, fs, amts };
+  }
+
+  /* ===== 몸판 조각 생성 ===== */
+  function makeBody(id, name, lay, kind) {
+    // kind: 'back' | 'front' | 'rfront' | 'lfront'
+    const half = kind === 'rfront' || kind === 'lfront';
+    const pl = bodyPlan(lay, half ? 0.5 : 1);
+    const Nc = pl.Nc, Nh = pl.Nh;
+    const Ash = half ? A : A; // 한쪽 진동 줄임 동일
+    const W = Math.max(Nc, Nh);
+    const l0 = (W - Nh) / 2;
+    const ops = {}, splits = {}, info = { Nc, Nh, wChest: pl.wChest, wHip: pl.wHip };
+    // 옆선
+    const ss = sideShaping(Nh, Nc, half);
+    const sideEdges = kind === 'rfront' ? [{ seg: 'main', edge: 'left' }] : kind === 'lfront' ? [{ seg: 'main', edge: 'right' }] : [{ seg: 'main', edge: 'left' }, { seg: 'main', edge: 'right' }];
+    const centerEdge = kind === 'rfront' ? [{ seg: 'main', edge: 'right' }] : kind === 'lfront' ? [{ seg: 'main', edge: 'left' }] : [];
+    if (ss.blocks.length) {
+      addEvents(ops, blocksToEvents(ribRows + 1 + ss.F, ss.blocks, ss.kind), sideEdges);
+      // 가디건 앞판은 옆선만 조정 -> 앞중심 쪽은 반영 안 함 (중심선 직선)
+    }
+    info.side = ss;
+    // 진동
+    const ahEdges = sideEdges;
+    addEvents(ops, blocksToEvents(ahStart, ahBlocks, 'dec'), ahEdges);
+    info.ahBlocks = ahBlocks;
+    // 어깨
+    const shBlocks = shParts.map(a => ({ len: 2, amt: a, kind: shoulderKind }));
+    const shEdges = kind === 'rfront' ? [{ seg: 'main', edge: 'left' }] : kind === 'lfront' ? [{ seg: 'main', edge: 'right' }] : [{ seg: 'main', edge: 'left' }, { seg: 'main', edge: 'right' }];
+    addEvents(ops, blocksToEvents(shStart, shBlocks, shoulderKind), shEdges);
+    info.shBlocks = shBlocks;
+    // 목
+    const centerCol = (W - 1) / 2;
+    const NshThis = (half ? Nc - A : Nc - 2 * A);
+    const neckSts = half ? NshThis - shSts : NshThis - 2 * shSts;
+    info.neckSts = neckSts; info.Nsh = NshThis;
+    if (kind === 'back') {
+      const nb = rowsOf(d.backNeckD);
+      const s = totalRows - nb + 1;
+      const maxEv = Math.max(1, nb / 2 - 1);
+      const bs = clamp(Math.round(neckSts * 0.15), 2, 4);
+      const amts = mergeToFit(bs, maxEv, 0);
+      const center = neckSts - 2 * bs;
+      const a = Math.round(centerCol - (center - 1) / 2);
+      splits[s] = { a, b: a + center - 1 };
+      const blocks = amts.map(x => ({ len: 2, amt: x, kind: x >= 2 ? 'bo' : 'dec' }));
+      addEvents(ops, blocksToEvents(s + 2, blocks, 'dec'), [{ seg: 'L', edge: 'right' }, { seg: 'R', edge: 'left' }]);
+      info.neck = { type: 'back', s, center, blocks, depthRows: nb };
+    } else if (kind === 'front' && !isV) {
+      const nf = rowsOf(d.frontNeckD);
+      const s = totalRows - nf + 1;
+      const rn = roundNeck(neckSts, nf);
+      const a = Math.round(centerCol - (rn.center - 1) / 2);
+      splits[s] = { a, b: a + rn.center - 1 };
+      const blocks = rn.amts.map(x => ({ len: 2, amt: x, kind: x >= 2 ? 'bo' : 'dec' }));
+      addEvents(ops, blocksToEvents(s + 2, blocks, 'dec'), [{ seg: 'L', edge: 'right' }, { seg: 'R', edge: 'left' }]);
+      info.neck = { type: 'round', s, center: rn.center, blocks, depthRows: nf };
+    } else if (kind === 'front' && isV) {
+      const nv = rowsOf(d.vDepth);
+      const s = totalRows - nv + 1;
+      const odd = neckSts % 2 === 1;
+      const fs = Math.floor(neckSts / 2);
+      const mid = Math.floor(W / 2);
+      if (odd) splits[s] = { a: Math.round(centerCol), b: Math.round(centerCol) };
+      else splits[s] = { a: mid, b: mid - 1 }; // 0코 덮어씌우기
+      const H = nv - 6;
+      let iv = distribute(H, fs);
+      if (iv.reduce((a, x) => a + x, 0) > H) warn('V넥 깊이에 비해 줄일 코가 많습니다. V넥 깊이를 늘리세요.');
+      const blocks = iv.map(len => ({ len, amt: 1, kind: 'dec' }));
+      addEvents(ops, blocksToEvents(s + 2, blocks, 'dec'), [{ seg: 'L', edge: 'right' }, { seg: 'R', edge: 'left' }]);
+      info.neck = { type: 'v', s, center: odd ? 1 : 0, blocks, depthRows: nv };
+    } else if (half) {
+      const neckRows = isV ? rowsOf(d.vDepth) : rowsOf(d.frontNeckD);
+      const s = totalRows - neckRows + 1;
+      let blocks;
+      if (isV) {
+        const H = neckRows - 6;
+        const iv = distribute(H, neckSts);
+        if (iv.reduce((a, x) => a + x, 0) > H) warn('V넥 깊이에 비해 줄일 코가 많습니다. V넥 깊이를 늘리세요.');
+        blocks = iv.map(len => ({ len, amt: 1, kind: 'dec' }));
+        addEvents(ops, blocksToEvents(s, blocks, 'dec'), centerEdge);
+      } else {
+        const maxEv = Math.max(2, Math.floor((neckRows - 4) / 2));
+        const ch = Math.max(2, Math.round(neckSts * 0.34));
+        const amts = [ch, ...neckSide(neckSts - ch, maxEv - 1)];
+        blocks = amts.map(x => ({ len: 2, amt: x, kind: x >= 2 ? 'bo' : 'dec' }));
+        addEvents(ops, blocksToEvents(s, blocks, 'dec'), centerEdge);
+      }
+      info.neck = { type: isV ? 'v-half' : 'round-half', s, blocks, depthRows: neckRows };
+    }
+    const sim = simulate(W, l0, l0 + Nh - 1, totalRows, ops, splits);
+    if (sim.left) warn(`${name}: 마지막 단 뒤에 ${sim.left}코가 남습니다. 치수를 확인하세요.`);
+    // 무늬 배치
+    const placements = [];
+    let x = Math.round((W - lay.panelW) / 2);
+    lay.blocks.forEach(bk => {
+      if (bk.type === 'motif') placements.push({ kind: 'motif', x0: x, w: bk.w, y0: ribRows + 1, ex: expandMotif(bk.motif), motif: bk.motif });
+      else placements.push({ kind: bk.type, x0: x, w: bk.w, y0: ribRows + 1 });
+      x += bk.w;
+    });
+    const pc = { id, name, W, rows: sim.rows, marks: sim.marks, ribRows, ribType: pat.rib, bg: pat.bg, placements, lay, info, kind };
+    fillPiece(pc);
+    return pc;
+  }
+
+  const back = makeBody('back', '뒤판', layBack, 'back');
+  pieces.push(back);
+  if (isCard) {
+    pieces.push(makeBody('rfront', '오른앞판', layOne, 'rfront'));
+    const lay2 = { blocks: layOne.blocks.map(bk => bk.type === 'motif' ? { ...bk, motif: mirrorMotif(bk.motif) } : bk), panelW: layOne.panelW, cableSts: layOne.cableSts };
+    pieces.push(makeBody('lfront', '왼앞판', lay2, 'lfront'));
+  } else {
+    pieces.push(makeBody('front', '앞판', layFront, 'front'));
+  }
+
+  // 진동 둘레 (뒤판 오른쪽 가장자리, 진동 시작 ~ 어깨 경사 시작)
+  const ahLen = edgeLen(back.rows, ahStart, shStart - 1, 'right', gs, gr);
+
+  /* ===== 소매 ===== */
+  const cuffRows = rowsOf(d.cuffH);
+  const Ncuff = stsFor(T.wrist, laySleeve, gs, dens);
+  let upperCm = T.upper, sleeveLen = T.armLen;
+  const bodyChestCm = cmFor(back.info.Nc, layBack, gs, dens);
+  const shoulderCm = isDrop ? bodyChestCm : cmFor(NshBack, layBack, gs, dens);
+  if (isDrop) {
+    const ahCm = ahRows / gr;
+    if (2 * ahCm < T.upper) warn('드롭숄더 진동깊이 x 2가 위팔둘레(여유 포함)보다 작습니다. 진동깊이를 늘리세요.');
+    upperCm = 2 * ahCm;
+    sleeveLen = T.armLen - (bodyChestCm - T.shoulder) / 2;
+  }
+  let Nup = stsFor(upperCm, laySleeve, gs, dens);
+  if ((Nup - Ncuff) % 2) Nup++;
+  if (Nup < Ncuff) warn('위팔둘레가 손목둘레보다 작게 계산되었습니다.');
+
+  function sleeveBuild(capRows, capPlan) {
+    const underRows = Math.max(4, rowsOf(sleeveLen) - capRows - cuffRows);
+    const total = cuffRows + underRows + capRows;
+    const W = Math.max(Nup, Ncuff);
+    const l0 = (W - Ncuff) / 2;
+    const ops = {};
+    const di = (Nup - Ncuff) / 2;
+    const F = Math.min(rowsOf(2), Math.max(0, underRows - 4));
+    const H = Math.max(2, underRows - F - rowsOf(3));
+    const iv = distribute(H, di);
+    const incBlocks = iv.map(len => ({ len, amt: 1 }));
+    addEvents(ops, blocksToEvents(cuffRows + 1 + F, incBlocks, 'inc'), [{ seg: 'main', edge: 'left' }, { seg: 'main', edge: 'right' }]);
+    const capStart = cuffRows + underRows + 1;
+    if (capPlan) addEvents(ops, blocksToEvents(capStart, capPlan, 'dec'), [{ seg: 'main', edge: 'left' }, { seg: 'main', edge: 'right' }]);
+    const sim = simulate(W, l0, l0 + Ncuff - 1, total, ops, {});
+    return { W, sim, total, underRows, capStart, incBlocks, F, H, ivOver: iv.reduce((a, x) => a + x, 0) > H };
+  }
+  function capPlanFor(hc) {
+    const init = ahBlocks.filter(x => x.kind === 'bo').map(x => ({ ...x }));
+    const initSum = init.reduce((a, x) => a + x.amt, 0);
+    const topTarget = stsFor(d.capTop, laySleeve, gs, dens);
+    const topSts = Nup - 2 * Math.floor((Nup - topTarget) / 2);
+    const rem = (Nup - topSts) / 2 - initSum;
+    if (rem < 0) return null;
+    const Hc = hc - 2 * init.length - 2;
+    const E = Math.floor(Hc / 2);
+    if (E < 1) return null;
+    let body;
+    if (rem > E) { // 가파른 소매산: 일부를 2코 덮어씌우기로
+      const amts = Array(E).fill(1);
+      let extra = rem - E, i = 0;
+      while (extra > 0) { const k = i % 2 === 0 ? Math.floor(i / 2) : E - 1 - Math.floor(i / 2); amts[k]++; extra--; i++; if (i > 4 * E) break; }
+      if (extra > 0) return null;
+      body = amts.map(a => ({ len: 2, amt: a, kind: a >= 2 ? 'bo' : 'dec' }));
+    } else {
+      const tail = rem >= 12 ? [2, 2] : rem >= 7 ? [2] : [];
+      const md = rem - tail.reduce((a, x) => a + x, 0);
+      const Hm = Hc - 2 * tail.length;
+      const iv = distribute(Hm, md);
+      const mid = iv.map(len => ({ len, amt: 1, kind: 'dec' }));
+      const twos = mid.filter(x => x.len === 2), others = mid.filter(x => x.len !== 2);
+      const half = Math.ceil(twos.length / 2);
+      body = [...twos.slice(0, half), ...others, ...twos.slice(half), ...tail.map(a => ({ len: 2, amt: a, kind: 'bo' }))];
+    }
+    const blocks = [...init, ...body];
+    const consumed = blocks.reduce((a, x) => a + x.len, 0);
+    if (consumed > hc) return null;
+    return { blocks, topSts };
+  }
+
+  let sleeve, capInfo = null;
+  if (!isDrop) {
+    const lo = Math.max(6, even(0.5 * ahRows)), hi = even(0.85 * ahRows);
+    let best = null;
+    for (let hc = lo; hc <= hi; hc += 2) {
+      const cp = capPlanFor(hc); if (!cp) continue;
+      const sb = sleeveBuild(hc, cp.blocks);
+      const capEdge = edgeLen(sb.sim.rows, sb.capStart, sb.total, 'right', gs, gr);
+      const topCm = cp.topSts / gs;
+      const capTotal = 2 * capEdge + topCm;
+      const armTotal = 2 * ahLen;
+      const easeC = capTotal - armTotal;
+      const score = Math.abs(easeC - 1.5) + Math.max(0, cp.blocks.filter(x => x.amt >= 2).length - 4) * 0.4;
+      if (!best || score < best.score) best = { hc, cp, sb, capTotal, armTotal, easeC, score };
+    }
+    if (!best) {
+      warn('소매산을 진동둘레에 맞출 수 없어 기본값으로 계산했습니다. 위팔둘레, 진동깊이, 소매산 윗폭을 확인하세요.');
+      const hc = even(0.65 * ahRows);
+      const sb = sleeveBuild(hc, null);
+      sleeve = sb; capInfo = { hc, blocks: [], topSts: Nup, easeC: 0, capTotal: 0, armTotal: 2 * ahLen };
+    } else {
+      sleeve = best.sb; capInfo = { hc: best.hc, blocks: best.cp.blocks, topSts: best.cp.topSts, easeC: best.easeC, capTotal: best.capTotal, armTotal: best.armTotal };
+    }
+  } else {
+    sleeve = sleeveBuild(0, null);
+    capInfo = null;
+  }
+  if (capInfo && capInfo.blocks.length && capInfo.easeC > 3) warn(`소매산 둘레가 진동 둘레보다 ${fmt(capInfo.easeC)}cm 깁니다(권장 0~3cm). 위팔 여유를 줄이거나 진동깊이를 늘리면 소매산이 자연스러워집니다.`);
+  if (capInfo && capInfo.blocks.length && capInfo.easeC < -0.5) warn(`소매산 둘레가 진동 둘레보다 ${fmt(-capInfo.easeC)}cm 짧습니다. 위팔 여유를 늘리거나 소매산 윗폭을 넓히세요.`);
+  if (sleeve.ivOver) warn('소매 늘림 간격이 2단으로 촘촘합니다. 소매길이나 위팔 여유를 확인하세요.');
+  const sPlacements = [];
+  {
+    let x = Math.round((sleeve.W - laySleeve.panelW) / 2);
+    laySleeve.blocks.forEach(bk => {
+      if (bk.type === 'motif') sPlacements.push({ kind: 'motif', x0: x, w: bk.w, y0: cuffRows + 1, ex: expandMotif(bk.motif), motif: bk.motif });
+      else sPlacements.push({ kind: bk.type, x0: x, w: bk.w, y0: cuffRows + 1 });
+      x += bk.w;
+    });
+  }
+  const sleevePc = {
+    id: 'sleeve', name: '소매 (2장)', W: sleeve.W, rows: sleeve.sim.rows, marks: sleeve.sim.marks, ribRows: cuffRows, ribType: pat.rib, bg: pat.bg,
+    placements: sPlacements, lay: laySleeve, finalBo: true, kind: 'sleeve',
+    info: { Ncuff, Nup, underRows: sleeve.underRows, capStart: sleeve.capStart, incBlocks: sleeve.incBlocks, F: sleeve.F, cap: capInfo, upperCm, sleeveLen }
+  };
+  fillPiece(sleevePc);
+  pieces.push(sleevePc);
+
+  /* ===== 완성 치수 ===== */
+  const frontPc = pieces.find(p => p.kind === 'front' || p.kind === 'rfront');
+  const finished = {
+    chest: isCard ? bodyChestCm + 2 * cmFor(frontPc.info.Nc, frontPc.lay, gs, dens) + d.bandW : bodyChestCm + cmFor(frontPc.info.Nc, frontPc.lay, gs, dens),
+    hem: isCard ? cmFor(back.info.Nh, layBack, gs, dens) + 2 * cmFor(frontPc.info.Nh, frontPc.lay, gs, dens) + d.bandW : cmFor(back.info.Nh, layBack, gs, dens) + cmFor(frontPc.info.Nh, frontPc.lay, gs, dens),
+    length: totalRows / gr, armDepth: ahRows / gr, shoulder: shoulderCm,
+    neckW: cmFor(NshBack, layBack, gs, dens) - 2 * shSts / gs,
+    sleeveLen: sleeve.total / gr, upper: cmFor(Nup, laySleeve, gs, dens), cuff: cmFor(Ncuff, laySleeve, gs, dens),
+    ribH: ribRows / gr, cuffH: cuffRows / gr,
+  };
+
+  /* ===== 넥밴드 / 앞단 ===== */
+  function neckOpening(pc) {
+    const nk = pc.info.neck; if (!nk) return 0;
+    const lastL = pc.rows.length - 1;
+    const Lside = edgeLen(pc.rows, nk.s + 1, lastL, 'right', gs, gr, segs => segs.find(s => s.name === 'L'));
+    const Rside = edgeLen(pc.rows, nk.s + 1, lastL, 'left', gs, gr, segs => segs.find(s => s.name === 'R'));
+    return Lside + Rside + (nk.center || 0) / gs;
+  }
+  let neckCirc;
+  if (isCard) {
+    const fr = pieces.find(p => p.kind === 'rfront');
+    const frontNeck = edgeLen(fr.rows, fr.info.neck.s, fr.rows.length - 1, 'right', gs, gr) ;
+    neckCirc = neckOpening(back) + 2 * frontNeck - 2 * shSts / gs * 0; // 앞판 목선
+  } else neckCirc = neckOpening(back) + neckOpening(frontPc);
+  const nbRows = rowsOf(d.neckbandH);
+  const ribMult = pat.rib === '2x2' ? 4 : 2;
+  let neckPick = Math.round(neckCirc * gs * 0.92 / ribMult) * ribMult;
+
+  let band = null;
+  if (isCard) {
+    const fr = pieces.find(p => p.kind === 'rfront');
+    const edgeCm = (fr.info.neck.s - 1) / gr;
+    let pick = Math.round(edgeCm * gs * 0.9);
+    if (pat.rib === '2x2') pick = Math.round((pick - 2) / 4) * 4 + 2; else pick = pick % 2 ? pick : pick + 1;
+    const nb = Math.max(2, d.buttons || 6);
+    const first = 3, last = pick - 3;
+    const pos = Array.from({ length: nb }, (_, i) => Math.round(first + (last - first) * i / (nb - 1)));
+    band = { edgeCm, pick, pos, rows: rowsOf(d.bandW), nb };
+    if (!isV) neckPick = neckPick; // 넥밴드는 앞단 포함하여 줍기
+  }
+
+  /* ===== 실 사용량 ===== */
+  let cells = 0;
+  pieces.forEach(pc => { const mult = pc.kind === 'sleeve' ? 2 : 1; pc.codes.forEach(row => { if (row) row.forEach(v => { if (v) cells += mult; }); }); });
+  cells += neckPick * nbRows + (band ? band.pick * band.rows * 2 : 0);
+  const sw = P.gauge.swatchW;
+  const gSw = P.gauge.unit === '10cm' ? P.gauge.st * P.gauge.row : P.gauge.st * P.gauge.row * 100;
+  const yarnG = sw ? cells / gSw * sw * 1.08 : null;
+
+  return {
+    pieces, warnings: W_, T, finished, gs, gr, dens, ribRows, ahRows, totalRows, sideRows, ahStart, shStart, shSts, shParts, A, NshBack,
+    ahLen, cuffRows, capInfo, neckPick, nbRows, neckCirc, band, yarnG, cells, layFull, layBack, laySleeve, layFront, isCard, isV, isDrop,
+  };
+}
+
+/* ===================== 서술형 도안 ===================== */
+function runsText(tokens, ws) {
+  // tokens: 칸 기준 진행 순서 배열 (이미 읽는 방향 정렬)
+  const out = []; let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (parseTok(t)) { out.push(crossName(t)); i++; continue; }
+    let j = i; while (j < tokens.length && tokens[j] === t) j++;
+    const n = j - i;
+    const nm = ws ? (STITCH[t] ? STITCH[t].ws : t) : (STITCH[t] ? STITCH[t].name : t);
+    out.push(n > 1 ? `${nm} ${n}코` : `${nm} 1코`);
+    i = j;
+  }
+  return out.join(', ');
+}
+function motifRowsText(m) {
+  return m.rows.map((row, i) => {
+    const rs = i % 2 === 0;
+    const seq = rs ? row.slice().reverse() : row.slice();
+    return `${i + 1}단(${rs ? '겉면' : '안면'}): ${runsText(seq, !rs)}`;
+  });
+}
+function blocksDesc(lay, bg) {
+  // 겉면 1단 기준, 오른쪽부터
+  const list = lay.blocks.slice().reverse().map(b => {
+    if (b.type === 'motif') return `${b.motif._label || b.motif.name} ${b.w}코`;
+    if (b.type === 'purl') return `안뜨기 ${b.w}코`;
+    return `${BG_NAME[bg]} ${b.w}코`;
+  });
+  return list;
+}
+
+function buildText(P, C) {
+  const out = []; // {t:'h1'|'h2'|'h3'|'p'|'li'|'note', s}
+  const H1 = s => out.push({ t: 'h1', s }), H2 = s => out.push({ t: 'h2', s }), Pp = s => out.push({ t: 'p', s }), Li = s => out.push({ t: 'li', s }), Nt = s => out.push({ t: 'note', s });
+  const g = P.gauge, d = P.design, pat = P.pattern;
+  const gsTxt = `${fmt(C.gs * 10)}코 x ${fmt(C.gr * 10)}단 (10cm x 10cm, ${BG_NAME[pat.bg]})`;
+  const cm = r => fmt(r / C.gr);
+  const garmentName = (C.isCard ? '가디건' : '풀오버') + ', ' + (C.isV ? 'V넥' : '라운드넥') + ', ' + (C.isDrop ? '드롭숄더' : '셋인 슬리브');
+  H1(P.name || '이름 없는 도안');
+  Pp(`${garmentName}. 아래에서 위로 뜨는 조각 뜨기 방식이며, 각 조각을 뜬 뒤 꿰매어 완성합니다.`);
+
+  H2('재료');
+  Li(`실: ${g.yarn || '(실 이름 입력)'}${C.yarnG ? `, 약 ${Math.ceil(C.yarnG / 10) * 10}g` + (g.ballW ? ` (${g.ballW}g 볼 ${Math.ceil(C.yarnG / g.ballW)}개)` : '') : ''}`);
+  Li(`바늘: 몸판 ${g.needle || '-'}mm 대바늘, 고무단 ${g.ribNeedle || '-'}mm 대바늘, 넥밴드용 ${g.ribNeedle || '-'}mm 줄바늘(40cm)`);
+  const hasCable = C.pieces.some(p => p.codes.some(row => row && row.some(v => typeof v === 'string' && parseTok(v))));
+  Li(`부자재: ${hasCable ? '꽈배기바늘, ' : ''}단수 링, 돗바늘${C.isCard ? `, 단추 ${C.band.nb}개 (지름 1.5cm 내외)` : ''}`);
+  H2('게이지');
+  Pp(`${gsTxt}. 반드시 게이지 스와치를 떠서 세탁, 건조 후 측정하세요. 게이지가 다르면 완성 치수가 달라집니다.${C.layFull.cableSts ? ` 꽈배기 무늬는 메리야스보다 폭이 줄어드는 비율 ${fmt(C.dens)}배를 적용해 코 수를 계산했습니다.` : ''}`);
+
+  const f = C.finished;
+  const n0 = out.length;
+  H2('완성 치수');
+  Li(`가슴둘레 ${fmt(f.chest)}cm, 밑단둘레 ${fmt(f.hem)}cm, 총장 ${fmt(f.length)}cm`);
+  Li(`어깨너비 ${fmt(f.shoulder)}cm, 진동깊이 ${fmt(f.armDepth)}cm, 목너비 ${fmt(f.neckW)}cm`);
+  Li(`소매길이 ${fmt(f.sleeveLen)}cm, 소매통(위팔) ${fmt(f.upper)}cm, 소맷부리 ${fmt(f.cuff)}cm`);
+  for (let i = n0; i < out.length; i++) out[i].sec = 'fin';
+
+  H2('읽는 법');
+  Pp('차트는 겉면에서 본 모양입니다. 홀수 단(겉면)은 오른쪽에서 왼쪽으로, 짝수 단(안면)은 왼쪽에서 오른쪽으로 읽으며 안면에서는 기호의 반대 코(겉뜨기는 안뜨기로)를 뜹니다.');
+  Pp('줄임, 늘림 표기 "단-코-회"는 해당 단수마다 몇 코씩 몇 회 하는지를 뜻합니다. 예: 2-1-4는 2단마다 1코씩 4회. 각 구간의 첫 겉면 단에서 실행합니다. 2코 이상은 덮어씌우기, 1코는 겹치기(가장자리 1코 안쪽)로 합니다.');
+  Pp('덮어씌우기는 단의 시작에서만 할 수 있으므로, 오른쪽 가장자리는 겉면 단에서, 왼쪽 가장자리는 다음 안면 단에서 합니다.');
+
+  // 무늬 설명
+  const usedMotifs = [];
+  C.pieces.forEach(pc => pc.placements.slice().reverse().forEach(p => { if (p.kind === 'motif' && !usedMotifs.find(m => m.id === p.motif.id)) usedMotifs.push(p.motif); }));
+  if (usedMotifs.length) {
+    H2('무늬');
+    usedMotifs.forEach((m, i) => {
+      m._label = `무늬 ${String.fromCharCode(65 + i)}`;
+      const ex = expandMotif(m);
+      out.push({ t: 'h3', s: `${m._label}: ${m.name} (${ex.w}코 ${ex.h}단 반복)` });
+      motifRowsText(m).forEach(s => Li(s));
+    });
+    C.pieces.forEach(pc => pc.placements.forEach(p => { if (p.kind === 'motif') { const u = usedMotifs.find(m => m.id === p.motif.id); if (u) p.motif._label = u._label; } }));
+  }
+
+  // 조각
+  const ribName = RIB_NAME[pat.rib];
+  C.pieces.forEach(pc => {
+    H2(pc.name);
+    const info = pc.info;
+    const isSleeve = pc.kind === 'sleeve';
+    const startN = isSleeve ? info.Ncuff : info.Nh;
+    const ribR = pc.ribRows;
+    Pp(`${g.ribNeedle || ''}mm 바늘로 일반코잡기 ${startN}코를 잡습니다. 가장자리 1코씩은 꿰매기용 코로 늘 겉뜨기합니다. ${ribName}로 ${cm(ribR)}cm(${ribR}단)를 뜹니다.`);
+    if (pc.lay.panelW) Pp(`${g.needle || ''}mm 바늘로 바꾸어 다음 배치로 뜹니다 (겉면, 오른쪽부터): 가장자리 1코, ${BG_NAME[pat.bg]} ${(startN - pc.lay.panelW - 2) / 2}코, ${blocksDesc(pc.lay, pat.bg).join(', ')}, ${BG_NAME[pat.bg]} ${(startN - pc.lay.panelW - 2) / 2}코, 가장자리 1코.`);
+    else Pp(`${g.needle || ''}mm 바늘로 바꾸어 가장자리 1코, ${BG_NAME[pat.bg]} ${startN - 2}코, 가장자리 1코로 뜹니다.`);
+    if (!isSleeve) {
+      const ss = info.side;
+      if (ss && ss.blocks.length) Pp(`옆선: 고무단 위로 평 ${ss.F}단을 뜬 뒤 ${pc.kind === 'rfront' || pc.kind === 'lfront' ? '옆선 쪽에서' : '양쪽에서'} ${notation(ss.blocks)} ${ss.kind === 'inc' ? '늘립니다' : '줄입니다'} (${ss.n}코씩). ${ss.kind === 'inc' ? '늘린 코는 바탕무늬로 뜹니다.' : ''}`);
+      Pp(`고무단 위로 ${cm(C.sideRows)}cm(${C.sideRows}단)까지 뜨면 ${info.Nc}코가 됩니다. 단수 링을 겁니다.`);
+      if (C.A > 0) Pp(`진동: ${pc.kind === 'rfront' ? '왼쪽(옆선 쪽) 가장자리에서' : pc.kind === 'lfront' ? '오른쪽(옆선 쪽) 가장자리에서' : '양쪽에서'} ${notation(info.ahBlocks)} 줄입니다 (${C.A}코씩). ${pc.kind === 'rfront' || pc.kind === 'lfront' ? '' : `남은 코는 ${info.Nsh}코입니다.`}`);
+      else Pp('드롭숄더이므로 진동 줄임 없이 곧게 뜹니다. 소매 달 위치에 단수 링을 겁니다.');
+      const nk = info.neck;
+      if (nk && nk.type === 'back') Pp(`뒷목: 총장까지 ${cm(nk.depthRows)}cm(${nk.depthRows}단) 남은 ${nk.s}단째(겉면)에서 중앙 ${nk.center}코를 덮어씌우고 좌우를 나누어 뜹니다. 목 쪽에서 ${notation(nk.blocks)} 줄입니다.`);
+      if (nk && nk.type === 'round') Pp(`앞목: ${nk.s}단째(겉면, 총장까지 ${cm(nk.depthRows)}cm)에서 중앙 ${nk.center}코를 덮어씌우고 좌우를 나누어 뜹니다. 목 쪽에서 ${notation(nk.blocks)} 줄인 뒤 어깨까지 곧게 뜹니다. 한쪽을 먼저 끝내고 반대쪽에 실을 새로 이어 대칭으로 뜹니다.`);
+      if (nk && nk.type === 'v') Pp(`V넥: ${nk.s}단째(겉면, 총장까지 ${cm(nk.depthRows)}cm)에서 ${nk.center ? '중앙 1코를 덮어씌우고' : '중앙에서'} 좌우로 나눕니다. 평 2단 후 목 쪽에서 ${notation(nk.blocks)} 줄입니다 (가장자리 1코 안쪽에서 겹치기).`);
+      if (nk && nk.type === 'round-half') Pp(`앞목: ${nk.s}단째부터 앞중심 쪽에서 ${notation(nk.blocks)} 줄입니다.`);
+      if (nk && nk.type === 'v-half') Pp(`V넥: ${nk.s}단째부터 앞중심 쪽에서 ${notation(nk.blocks)} 줄입니다.`);
+      const shTxt = notation(info.shBlocks);
+      if (P.design.shoulderMethod === 'sr') Pp(`어깨: ${C.shStart}단째부터 어깨 쪽에서 ${shTxt} 되돌아뜨기를 합니다. 마지막 단에서 남긴 코를 모두 정리해 뜬 뒤 어깨 ${C.shSts}코는 쉼코로 둡니다 (앞뒤 어깨는 빼뜨기 잇기).`);
+      else Pp(`어깨: ${C.shStart}단째부터 어깨 쪽에서 ${shTxt} 계단식으로 덮어씌웁니다 (어깨 ${C.shSts}코).`);
+      Pp(`총 ${pc.total}단, 총장 ${cm(pc.total)}cm.`);
+    } else {
+      const ib = info.incBlocks;
+      Pp(`소매 늘림: 소맷부리 위로 평 ${info.F}단을 뜬 뒤 양쪽에서 ${notation(ib)} 늘립니다. ${info.Nup}코가 됩니다. 늘린 코는 바탕무늬로 뜹니다.`);
+      Pp(`소맷부리 위로 ${cm(info.underRows)}cm(${info.underRows}단)까지 뜹니다.`);
+      if (info.cap) Pp(`소매산: 양쪽에서 ${notation(info.cap.blocks)} 줄인 뒤 남은 ${info.cap.topSts}코를 모두 덮어씌웁니다. 소매산 높이 ${cm(info.cap.hc)}cm(${info.cap.hc}단).`);
+      else Pp(`드롭숄더이므로 소매산 없이 ${info.Nup}코를 모두 덮어씌웁니다.`);
+      Pp(`총 ${pc.total}단. 같은 것을 2장 뜹니다.`);
+    }
+  });
+
+  H2('마무리');
+  Li(P.design.shoulderMethod === 'sr' ? '앞판과 뒤판의 어깨 쉼코를 겉끼리 마주 대고 빼뜨기로 잇습니다.' : '앞판과 뒤판의 어깨를 떠서 꿰매기로 잇습니다.');
+  if (C.isCard) {
+    const b = C.band;
+    Li(`넥밴드: ${g.ribNeedle || ''}mm 바늘로 앞중심 끝부터 목둘레를 따라 약 ${C.neckPick}코를 주워 ${ribName}로 ${cm(C.nbRows)}cm(${C.nbRows}단)를 뜨고 고무뜨기 덮어씌우기를 합니다.`);
+    Li(`앞단: 앞판 가장자리(밑단부터 넥밴드 끝까지)에서 ${b.pick}코를 주워 ${ribName}로 ${cm(b.rows)}cm(${b.rows}단)를 뜹니다. 단추 구멍 쪽 앞단(여성용은 오른앞판)은 ${Math.max(1, Math.floor(b.rows / 2))}단째에 아래에서부터 ${b.pos.join(', ')}번째 코 위치에 바늘비우기와 왼코 겹치기로 단추 구멍 ${b.nb}개를 냅니다.`);
+  } else if (C.isV) {
+    Li(`넥밴드: 왼쪽 어깨에서 시작해 목둘레를 따라 약 ${C.neckPick}코를 원통으로 줍고, V 중심 1코에 단수 링을 겁니다. ${ribName}로 뜨면서 매 단 V 중심에서 중심 3코 모아뜨기로 줄여 ${cm(C.nbRows)}cm(${C.nbRows}단)를 뜬 뒤 고무뜨기 덮어씌우기를 합니다.`);
+  } else {
+    Li(`넥밴드: ${g.ribNeedle || ''}mm 줄바늘로 목둘레를 따라 약 ${C.neckPick}코를 원통으로 주워 ${ribName}로 ${cm(C.nbRows)}cm(${C.nbRows}단)를 뜬 뒤 고무뜨기 덮어씌우기를 합니다. 접어서 꿰매는 이중 넥밴드는 2배 길이로 뜹니다.`);
+  }
+  Li(C.isDrop ? '소매 중심을 어깨 이음선에 맞추고, 몸판의 단수 링 사이에 소매 윗선을 꿰매어 답니다.' : '소매산 중심을 어깨 이음선에 맞추고 진동 둘레에 고르게 배분하며 소매를 답니다.');
+  Li('옆선과 소매 밑선을 가장자리 1코 안쪽에서 떠서 꿰매기(매트리스 스티치)로 잇습니다.');
+  Li('실 끝을 정리하고 완성 치수에 맞춰 블로킹합니다.');
+  return out;
+}
+
+if (typeof module !== 'undefined') module.exports = { compute, buildText, BUILTIN_MOTIFS, expandMotif, motifCheck, parseTok, symName, crossHow, STITCH, notation, mirrorMotif, motifRowsText, tokW, fmt };
+
+'use strict';
+/* ===================== 그리기 백엔드 ===================== */
+const INK = '#2A2320', GRID = '#C9BDB2', GRID10 = '#6F625A', PAPER = '#FFFFFF', TINT = '#FBE7B0', CENTER = '#F2A9C4', RIBLINE = '#A23E57';
+class SvgDraw {
+  constructor(w, h) { this.w = w; this.h = h; this.out = []; this.lb = new Map(); this.fb = new Map(); }
+  _k(m, k) { let b = m.get(k); if (!b) { b = []; m.set(k, b); } return b; }
+  line(x1, y1, x2, y2, sw, col, cap) { this._k(this.lb, sw + '|' + col + '|' + (cap || 'butt')).push(`M${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}`); }
+  fillRect(x, y, w, h, fill) { this._k(this.fb, fill).push(`M${x.toFixed(2)} ${y.toFixed(2)}h${w.toFixed(2)}v${h.toFixed(2)}h${(-w).toFixed(2)}Z`); }
+  flush() {
+    this.fb.forEach((d, k) => this.out.push(`<path d="${d.join('')}" fill="${k}"/>`));
+    this.lb.forEach((d, k) => { const [sw, col, cap] = k.split('|'); this.out.push(`<path d="${d.join('')}" stroke="${col}" stroke-width="${sw}" stroke-linecap="${cap}" fill="none"/>`); });
+    this.fb.clear(); this.lb.clear();
+  }
+  rect(x, y, w, h, fill, stroke, sw) { this.flush(); this.out.push(`<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" fill="${fill || 'none'}"${stroke ? ` stroke="${stroke}" stroke-width="${sw || 1}"` : ''}/>`); }
+  circle(cx, cy, r, fill, stroke, sw) { this.flush(); this.out.push(`<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${r.toFixed(2)}" fill="${fill || 'none'}"${stroke ? ` stroke="${stroke}" stroke-width="${sw || 1}"` : ''}/>`); }
+  poly(pts, fill, stroke, sw, close = true) { this.flush(); const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join('') + (close ? 'Z' : ''); this.out.push(`<path d="${d}" fill="${fill || 'none'}"${stroke ? ` stroke="${stroke}" stroke-width="${sw || 1}" stroke-linejoin="round"` : ''}/>`); }
+  text(x, y, s, size, col, align, weight) { this.flush(); const a = align === 'right' ? 'end' : align === 'center' ? 'middle' : 'start'; this.out.push(`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" fill="${col || INK}" text-anchor="${a}" dominant-baseline="middle" font-weight="${weight || 400}">${String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>`); }
+  toString() { this.flush(); return `<svg xmlns="http://www.w3.org/2000/svg" width="${this.w}" height="${this.h}" viewBox="0 0 ${this.w} ${this.h}" font-family="'Noto Sans KR', sans-serif">${this.out.join('')}</svg>`; }
+}
+class CanvasDraw {
+  constructor(ctx, ox = 0, oy = 0, sc = 1) { this.c = ctx; this.ox = ox; this.oy = oy; this.s = sc; }
+  X(x) { return this.ox + x * this.s; } Y(y) { return this.oy + y * this.s; }
+  line(x1, y1, x2, y2, sw, col, cap) { const c = this.c; c.beginPath(); c.moveTo(this.X(x1), this.Y(y1)); c.lineTo(this.X(x2), this.Y(y2)); c.lineWidth = sw * this.s; c.strokeStyle = col; c.lineCap = cap || 'butt'; c.stroke(); }
+  fillRect(x, y, w, h, fill) { this.c.fillStyle = fill; this.c.fillRect(this.X(x), this.Y(y), w * this.s, h * this.s); }
+  flush() { }
+  rect(x, y, w, h, fill, stroke, sw) { const c = this.c; if (fill) { c.fillStyle = fill; c.fillRect(this.X(x), this.Y(y), w * this.s, h * this.s); } if (stroke) { c.lineWidth = (sw || 1) * this.s; c.strokeStyle = stroke; c.strokeRect(this.X(x), this.Y(y), w * this.s, h * this.s); } }
+  circle(cx, cy, r, fill, stroke, sw) { const c = this.c; c.beginPath(); c.arc(this.X(cx), this.Y(cy), r * this.s, 0, Math.PI * 2); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.lineWidth = (sw || 1) * this.s; c.strokeStyle = stroke; c.stroke(); } }
+  poly(pts, fill, stroke, sw, close = true) { const c = this.c; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(this.X(p[0]), this.Y(p[1])) : c.moveTo(this.X(p[0]), this.Y(p[1]))); if (close) c.closePath(); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.lineWidth = (sw || 1) * this.s; c.strokeStyle = stroke; c.lineJoin = 'round'; c.stroke(); } }
+  text(x, y, s, size, col, align, weight) { const c = this.c; c.font = `${weight || 400} ${size * this.s}px 'Noto Sans KR', sans-serif`; c.fillStyle = col || INK; c.textAlign = align || 'left'; c.textBaseline = 'middle'; c.fillText(String(s), this.X(x), this.Y(y)); }
+}
+
+/* ---------- 기호 ---------- */
+function drawSym(D, code, x, y, cw, ch, opt) {
+  const cx = x + cw / 2, cy = y + ch / 2, m = Math.min(cw, ch), sw = Math.max(0.7, m * 0.075);
+  switch (code) {
+    case 'k': if (opt.showKnit) D.line(cx, y + ch * 0.22, cx, y + ch * 0.78, sw, INK); break;
+    case 'p': D.line(x + cw * 0.22, cy, x + cw * 0.78, cy, sw, INK); break;
+    case 'tk':
+      D.line(cx - cw * 0.16, y + ch * 0.82, cx + cw * 0.14, y + ch * 0.38, sw, INK);
+      D.line(cx + cw * 0.16, y + ch * 0.82, cx - cw * 0.14, y + ch * 0.38, sw, INK);
+      D.circle(cx, y + ch * 0.3, m * 0.14, null, INK, sw); break;
+    case 'yo': D.circle(cx, cy, m * 0.27, null, INK, sw); break;
+    case 'k2tog':
+      D.line(x + cw * 0.2, y + ch * 0.85, x + cw * 0.6, y + ch * 0.15, sw, INK);
+      D.line(x + cw * 0.8, y + ch * 0.85, x + cw * 0.45, y + ch * 0.43, sw, INK); break;
+    case 'ssk':
+      D.line(x + cw * 0.8, y + ch * 0.85, x + cw * 0.4, y + ch * 0.15, sw, INK);
+      D.line(x + cw * 0.2, y + ch * 0.85, x + cw * 0.55, y + ch * 0.43, sw, INK); break;
+    case 'sk2p':
+      D.line(x + cw * 0.18, y + ch * 0.85, cx, y + ch * 0.15, sw, INK);
+      D.line(x + cw * 0.82, y + ch * 0.85, cx, y + ch * 0.15, sw, INK);
+      D.line(cx, y + ch * 0.85, cx, y + ch * 0.15, sw, INK); break;
+    case 'mb': D.circle(cx, cy, m * 0.3, null, INK, sw); D.circle(cx, cy, m * 0.13, INK); break;
+    case 'bo': D.circle(cx, cy, m * 0.22, INK); break;
+    case 'sr': D.poly([[cx, y + ch * 0.2], [x + cw * 0.8, y + ch * 0.78], [x + cw * 0.2, y + ch * 0.78]], null, INK, sw); break;
+    case 'm1r': D.line(cx - cw * 0.08, y + ch * 0.85, cx - cw * 0.08, y + ch * 0.18, sw, INK); D.line(cx - cw * 0.08, y + ch * 0.55, cx + cw * 0.26, y + ch * 0.2, sw, INK); break;
+    case 'm1l': D.line(cx + cw * 0.08, y + ch * 0.85, cx + cw * 0.08, y + ch * 0.18, sw, INK); D.line(cx + cw * 0.08, y + ch * 0.55, cx - cw * 0.26, y + ch * 0.2, sw, INK); break;
+  }
+}
+function drawCross(D, tok, x, y, cw, ch, bgFill) {
+  const t = parseTok(tok), w = t.w;
+  D.rect(x + 0.5, y + 0.5, w * cw - 1, ch - 1, bgFill || PAPER);
+  D.rect(x, y, w * cw, ch, null, GRID, 0.6);
+  const m = Math.min(cw, ch), sw = Math.max(0.9, m * 0.1);
+  const yb = y + ch * 0.9, yt = y + ch * 0.1;
+  const cxs = i => x + (i + 0.5) * cw;
+  let top = [], under = [];
+  if (t.side === 'L') { for (let i = 0; i < t.a; i++) top.push([t.b + i, i]); for (let j = 0; j < t.b; j++) under.push([j, t.a + j]); }
+  else { for (let i = 0; i < t.a; i++) top.push([i, t.b + i]); for (let j = 0; j < t.b; j++) under.push([t.a + j, j]); }
+  under.forEach(([s, d]) => {
+    D.line(cxs(s), yb, cxs(d), yt, sw, INK, 'round');
+    if (t.purl) D.line(cxs(d) - cw * 0.22, y + ch * 0.28, cxs(d) + cw * 0.22, y + ch * 0.28, sw, INK);
+  });
+  D.flush();
+  top.forEach(([s, d]) => D.line(cxs(s), yb, cxs(d), yt, sw * 3.2, bgFill || PAPER, 'butt'));
+  D.flush();
+  top.forEach(([s, d]) => D.line(cxs(s), yb, cxs(d), yt, sw, INK, 'round'));
+  D.flush();
+}
+
+/* ---------- 차트 ---------- */
+function chartGeom(pc, opt) {
+  const W = pc.W, total = pc.total;
+  const r0 = opt.r0 || 1, r1 = opt.r1 || total, c0 = opt.c0 || 0, c1 = opt.c1 === undefined ? W - 1 : opt.c1;
+  const cw = opt.cw, ch = opt.ch;
+  const fs = Math.max(6, Math.min(12, Math.min(cw, ch) * 0.62));
+  const mL = fs * 2.6, mR = fs * 2.6, mB = fs * 2.4, mT = (opt.title ? fs * 2.6 : fs * 0.8);
+  return { W, total, r0, r1, c0, c1, cw, ch, fs, mL, mR, mB, mT, width: mL + (c1 - c0 + 1) * cw + mR, height: mT + (r1 - r0 + 1) * ch + mB };
+}
+function drawChart(D, pc, opt, G) {
+  G = G || chartGeom(pc, opt);
+  const { W, r0, r1, c0, c1, cw, ch, fs, mL, mT } = G;
+  const codes = pc.codes;
+  const ex = (r, c) => r >= 1 && r <= pc.total && c >= 0 && c < W && codes[r] && codes[r][c] !== null && codes[r][c] !== undefined;
+  const X = c => mL + (c - c0) * cw, Y = r => mT + (r1 - r) * ch;
+  if (opt.title) D.text(mL, mT * 0.45, opt.title, fs * 1.2, INK, 'left', 700);
+  // 1. 바탕 색
+  const tintAt = (r, c) => {
+    if (!opt.tint) return null;
+    for (const p of pc.placements || []) if (p.kind === 'motif' && c >= p.x0 && c < p.x0 + p.w && r >= p.y0) return TINT;
+    return null;
+  };
+  const centerOdd = W % 2 === 1, cc = (W - 1) / 2;
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    if (!ex(r, c)) continue;
+    const t = tintAt(r, c);
+    if (t && codes[r][c] !== 'bo') D.fillRect(X(c), Y(r), cw, ch, t);
+    if (opt.center && centerOdd && c === cc) D.fillRect(X(c), Y(r), cw, ch, '#FBDDE8');
+  }
+  // 2. 가는 격자
+  const gsw = Math.max(0.5, cw * 0.045);
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    if (!ex(r, c)) continue;
+    const x = X(c), y = Y(r);
+    D.line(x, y, x, y + ch, gsw, GRID); D.line(x, y + ch, x + cw, y + ch, gsw, GRID);
+    if (!ex(r, c + 1) || c === c1) D.line(x + cw, y, x + cw, y + ch, gsw, GRID);
+    if (!ex(r + 1, c) || r === r1) D.line(x, y, x + cw, y, gsw, GRID);
+  }
+  // 3. 10코/10단 굵은 선
+  const bsw = Math.max(0.8, cw * 0.08);
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    if (!ex(r, c)) continue;
+    const x = X(c), y = Y(r);
+    if ((W - c) % 10 === 0 && ex(r, c + 1)) D.line(x + cw, y, x + cw, y + ch, bsw, GRID10);
+    if (r % 10 === 0 && ex(r + 1, c)) D.line(x, y, x + cw, y, bsw, GRID10);
+  }
+  // 4. 중심선
+  if (opt.center && !centerOdd) {
+    const xc = X(W / 2);
+    for (let r = r0; r <= r1; r++) if (ex(r, W / 2) || ex(r, W / 2 - 1)) D.line(xc, Y(r), xc, Y(r) + ch, Math.max(1.5, cw * 0.22), CENTER);
+  }
+  // 5. 기호
+  const so = { showKnit: opt.showKnit };
+  const crosses = [];
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    if (!ex(r, c)) continue;
+    const v = codes[r][c];
+    if (v === '>') continue;
+    if (parseTok(v)) { crosses.push([r, c, v]); continue; }
+    drawSym(D, v, X(c), Y(r), cw, ch, so);
+  }
+  D.flush();
+  crosses.forEach(([r, c, v]) => {
+    const w = parseTok(v).w;
+    const cEnd = Math.min(c + w - 1, c1);
+    // 범위 밖으로 잘리는 교차는 잘린 부분만 표시
+    if (c < c0) return;
+    drawCross(D, v, X(c), Y(r), cw, ch, tintAt(r, c) || PAPER);
+    if (cEnd < c + w - 1) D.rect(X(cEnd + 1), Y(r), (c + w - 1 - cEnd) * cw, ch, '#FFFFFF');
+  });
+  // 6. 외곽선
+  const osw = Math.max(1.2, cw * 0.12);
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    if (!ex(r, c)) continue;
+    const x = X(c), y = Y(r);
+    if (!ex(r, c - 1)) D.line(x, y, x, y + ch, osw, INK, 'square');
+    if (!ex(r, c + 1)) D.line(x + cw, y, x + cw, y + ch, osw, INK, 'square');
+    if (!ex(r + 1, c)) D.line(x, y, x + cw, y, osw, INK, 'square');
+    if (!ex(r - 1, c)) D.line(x, y + ch, x + cw, y + ch, osw, INK, 'square');
+  }
+  // 고무단 경계
+  if (pc.ribRows && pc.ribRows >= r0 && pc.ribRows < r1) {
+    const y = Y(pc.ribRows);
+    let lo = Infinity, hi = -Infinity;
+    for (let c = c0; c <= c1; c++) if (ex(pc.ribRows, c)) { lo = Math.min(lo, c); hi = Math.max(hi, c); }
+    if (lo <= hi) D.line(X(lo) - cw * 0.6, y, X(hi + 1) + cw * 0.6, y, Math.max(1.2, cw * 0.14), RIBLINE);
+  }
+  // 7. 번호
+  const step = ch >= 9 ? 1 : ch >= 5 ? 2 : 5;
+  for (let r = r0; r <= r1; r++) {
+    if (r % step !== 0 && r !== r0 && r % 10 !== 0) continue;
+    const y = Y(r) + ch / 2, bold = r % 10 === 0 ? 700 : 400;
+    if (r % 2 === 1) { // 겉면: 오른쪽
+      let hi = -1; for (let c = c1; c >= c0; c--) if (ex(r, c)) { hi = c; break; }
+      const xr = hi >= 0 ? X(hi + 1) : X(c1 + 1);
+      D.text(Math.max(xr, X(c1 + 1)) + fs * 0.4, y, r, fs * 0.9, INK, 'left', bold);
+    } else {
+      D.text(X(c0) - fs * 0.4, y, r, fs * 0.9, INK, 'right', bold);
+    }
+  }
+  const yb = Y(r0) + ch + fs * 0.9;
+  for (let c = c0; c <= c1; c++) {
+    const n = W - c;
+    if (n % 5 === 0 || n === 1) D.text(X(c) + cw / 2, yb, n, fs * 0.85, INK, 'center', n % 10 === 0 ? 700 : 400);
+  }
+  D.flush();
+  return G;
+}
+function chartSVG(pc, opt) {
+  const G = chartGeom(pc, opt);
+  const D = new SvgDraw(Math.ceil(G.width), Math.ceil(G.height));
+  drawChart(D, pc, opt, G);
+  return D.toString();
+}
+function motifPiece(m) {
+  const ex = expandMotif(m);
+  const codes = [];
+  ex.cells.forEach((row, i) => {
+    const r = i + 1;
+    codes[r] = row.map(v => typeof v === 'object' ? (v.j === 0 ? v.tok : '>') : v);
+  });
+  return { W: ex.w, total: ex.h, codes, placements: [], ribRows: 0 };
+}
+function usedSymbols(pieces) {
+  const set = new Set();
+  pieces.forEach(pc => pc.codes.forEach(row => row && row.forEach(v => { if (v && v !== '>') set.add(v); })));
+  const order = ['k', 'p', 'tk', 'yo', 'k2tog', 'ssk', 'sk2p', 'mb', 'm1r', 'm1l', 'bo', 'sr'];
+  const list = order.filter(k => set.has(k));
+  [...set].filter(k => parseTok(k)).sort().forEach(k => list.push(k));
+  if (!list.includes('k')) list.unshift('k');
+  return list;
+}
+function symbolSVG(code, cs = 22, showKnit = true) {
+  const w = parseTok(code) ? parseTok(code).w : 1;
+  const D = new SvgDraw(w * cs + 2, cs + 2);
+  D.rect(1, 1, w * cs, cs, PAPER, GRID, 0.8);
+  if (parseTok(code)) drawCross(D, code, 1, 1, cs, cs, PAPER); else drawSym(D, code, 1, 1, cs, cs, { showKnit: true });
+  return D.toString();
+}
+
+/* ---------- 도식화 ---------- */
+function pieceOutlineCells(pc) {
+  const rects = [];
+  for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => rects.push([s.l, r, s.r - s.l + 1]));
+  return rects;
+}
+function drawSchematicPiece(D, C, pc, bx, by, scale, fs) {
+  const gs = C.gs, gr = C.gr;
+  fs = fs || 11;
+  const ph = (pc.total / gr) * scale, pw = (pc.W / gs) * scale;
+  const base = by + ph;
+  const sx = c => bx + (c / gs) * scale, sy = r => base - (r / gr) * scale;
+  const lw = Math.max(0.8, fs * 0.09);
+  const dimH = (xa, xb, y, label, above) => {
+    D.line(xa, y, xb, y, lw * 0.8, RIBLINE); D.line(xa, y - fs * 0.35, xa, y + fs * 0.35, lw * 0.8, RIBLINE); D.line(xb, y - fs * 0.35, xb, y + fs * 0.35, lw * 0.8, RIBLINE);
+    D.text((xa + xb) / 2, y + (above ? -fs * 0.75 : fs * 0.8), label, fs, INK, 'center', 500);
+  };
+  const dimV = (x, ya, yb, label, side) => {
+    D.line(x, ya, x, yb, lw * 0.8, RIBLINE); D.line(x - fs * 0.35, ya, x + fs * 0.35, ya, lw * 0.8, RIBLINE); D.line(x - fs * 0.35, yb, x + fs * 0.35, yb, lw * 0.8, RIBLINE);
+    D.text(x + (side === 'left' ? -fs * 0.5 : fs * 0.5), (ya + yb) / 2, label, fs, INK, side === 'left' ? 'right' : 'left', 500);
+  };
+  D.text(bx + pw / 2, by - fs * 4.4, pc.name, fs * 1.25, INK, 'center', 700);
+  for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => D.fillRect(sx(s.l), sy(r), ((s.r - s.l + 1) / gs) * scale + 0.3, scale / gr + 0.3, r <= pc.ribRows ? '#E6D2C4' : '#F4E8DE'));
+  const ex = (r, c) => pc.codes[r] && pc.codes[r][c] !== null && pc.codes[r][c] !== undefined;
+  for (let r = 1; r <= pc.total; r++) (pc.rows[r] || []).forEach(s => {
+    if (!ex(r, s.l - 1)) D.line(sx(s.l), sy(r), sx(s.l), sy(r - 1), lw * 1.4, INK, 'square');
+    if (!ex(r, s.r + 1)) D.line(sx(s.r + 1), sy(r), sx(s.r + 1), sy(r - 1), lw * 1.4, INK, 'square');
+    let a = null;
+    for (let c = s.l; c <= s.r + 1; c++) { const open = c <= s.r && !ex(r + 1, c); if (open && a === null) a = c; if (!open && a !== null) { D.line(sx(a), sy(r), sx(c), sy(r), lw * 1.4, INK, 'square'); a = null; } }
+    a = null;
+    for (let c = s.l; c <= s.r + 1; c++) { const open = c <= s.r && !ex(r - 1, c); if (open && a === null) a = c; if (!open && a !== null) { D.line(sx(a), sy(r - 1), sx(c), sy(r - 1), lw * 1.4, INK, 'square'); a = null; } }
+  });
+  D.flush();
+  const f = C.finished, info = pc.info, lay = pc.lay;
+  const cmOf = n => cmFor(n, lay, gs, C.dens);
+  const row1 = pc.rows[1][0], row1r = pc.rows[1][pc.rows[1].length - 1];
+  if (pc.kind !== 'sleeve') {
+    dimH(sx(row1.l), sx(row1r.r + 1), base + fs * 1.3, `${fmt(cmOf(info.Nh))}cm (${info.Nh}코)`);
+    const ur = C.ribRows + C.sideRows;
+    const s = pc.rows[ur]; const ul = s[0].l, uh = s[s.length - 1].r + 1;
+    dimH(sx(ul), sx(uh), sy(ur) + fs * 1.1, `${fmt(cmOf(info.Nc))}cm (${info.Nc}코)`);
+    const xl = sx(Math.min(row1.l, ul));
+    dimV(xl - fs * 1.4, base, sy(pc.total), `${fmt(pc.total / gr)}cm`, 'left');
+    dimV(xl - fs * 5.6, base, sy(C.ribRows), `${fmt(C.ribRows / gr)}`, 'left');
+    const xr = sx(Math.max(uh, row1r.r + 1)) + fs * 1.3;
+    dimV(xr, sy(ur), sy(pc.total), `${fmt(C.ahRows / gr)}cm`, 'right');
+    if (pc.kind === 'back' && info.neck) {
+      const shL = pc.rows[C.shStart - 1];
+      if (shL) dimH(sx(shL[0].l), sx(shL[shL.length - 1].r + 1), sy(pc.total) - fs * 2.6, `어깨 ${fmt(f.shoulder)}cm`, true);
+      const nb = (info.neck.blocks || []).reduce((a, b) => a + b.amt, 0);
+      const sr = pc.rows[info.neck.s + 1];
+      if (sr && sr.length === 2) dimH(sx(sr[0].r + 1 - nb), sx(sr[1].l + nb), sy(pc.total) - fs * 0.9, `${fmt(f.neckW)}cm`, true);
+    }
+    if (info.neck && pc.kind !== 'back') {
+      const xx = pc.kind === 'front' ? sx(pc.W / 2) : pc.kind === 'rfront' ? sx(row1r.r + 1) - fs * 0.6 : sx(row1.l) + fs * 0.6;
+      dimV(xx, sy(info.neck.s - 1), sy(pc.total), `${fmt(info.neck.depthRows / gr)}`, pc.kind === 'lfront' ? 'right' : 'left');
+    }
+  } else {
+    dimH(sx(row1.l), sx(row1r.r + 1), base + fs * 1.3, `${fmt(f.cuff)}cm (${info.Ncuff}코)`);
+    const ur = pc.ribRows + info.underRows;
+    const s = pc.rows[ur][0];
+    dimH(sx(s.l), sx(s.r + 1), sy(ur) + fs * 1.1, `${fmt(f.upper)}cm (${info.Nup}코)`);
+    dimV(sx(Math.min(s.l, row1.l)) - fs * 1.4, base, sy(pc.total), `${fmt(pc.total / gr)}cm`, 'left');
+    if (info.cap) dimV(sx(s.r + 1) + fs * 1.3, sy(ur), sy(pc.total), `소매산 ${fmt(info.cap.hc / gr)}`, 'right');
+  }
+  D.flush();
+  return { w: pw, h: ph };
+}
+function schemPieces(C) { return C.pieces.filter(p => p.kind !== 'lfront'); }
+function schematicSVG(C, availW) {
+  const fs = 11, padL = fs * 8, padR = fs * 6, padT = fs * 6, padB = fs * 3.4;
+  const list = schemPieces(C);
+  const sumW = list.reduce((a, pc) => a + pc.W / C.gs, 0);
+  const scale = Math.max(2.2, Math.min(7, (availW - list.length * (padL + padR)) / sumW));
+  const w = list.reduce((a, pc) => a + (pc.W / C.gs) * scale + padL + padR, 0);
+  const h = Math.max(...list.map(pc => (pc.total / C.gr) * scale)) + padT + padB;
+  const D = new SvgDraw(Math.ceil(w), Math.ceil(h));
+  let x = 0;
+  list.forEach(pc => { const r = drawSchematicPiece(D, C, pc, x + padL, padT, scale, fs); x += r.w + padL + padR; });
+  return D.toString();
+}
+
+'use strict';
+/* ===================== 앱 상태 ===================== */
+const PRESETS = {
+  '44': { chest: 82, hip: 88, shoulder: 36, armDepth: 16.5, neckW: 14.5, armLen: 54, upperArm: 25.5, wrist: 15, length: 56 },
+  '55': { chest: 86, hip: 92, shoulder: 38, armDepth: 17, neckW: 15, armLen: 55, upperArm: 27, wrist: 15.5, length: 58 },
+  '66': { chest: 90, hip: 96, shoulder: 39, armDepth: 17.5, neckW: 15.5, armLen: 56, upperArm: 28.5, wrist: 16, length: 60 },
+  '77': { chest: 95, hip: 100, shoulder: 40, armDepth: 18, neckW: 16, armLen: 57, upperArm: 30, wrist: 16.5, length: 61 },
+  '88': { chest: 100, hip: 104, shoulder: 41, armDepth: 18.5, neckW: 16.5, armLen: 57.5, upperArm: 32, wrist: 17, length: 62 },
+};
+function defaultProject() {
+  return {
+    name: '새 도안', garment: 'pullover', neck: 'round', sleeve: 'setin', size: '55',
+    body: { chest: 86, hip: 92, shoulder: 38, armDepth: 17, neckW: 15, armLen: 55, upperArm: 27, wrist: 15.5 },
+    ease: { chest: 8, hip: 6, shoulder: 0, armDepth: 3, neckW: 2, armLen: 0, upperArm: 4, wrist: 4 },
+    design: { length: 58, ribH: 6, cuffH: 6, neckbandH: 2.5, bandW: 3, frontNeckD: 7, backNeckD: 2, vDepth: 20, shoulderDrop: 2, capTop: 8, buttons: 6, shoulderMethod: 'bo' },
+    gauge: { unit: '10cm', st: 22, row: 30, dens: 1.2, swatchW: 6, needle: 4, ribNeedle: 3.5, yarn: '', ballW: 50 },
+    pattern: { bg: 'st', rib: '2x2', center: 'diamond10', side: 'rope6r', gap: 6, sep: 2, applyBack: false, applySleeve: true },
+    memo: '',
+  };
+}
+const S = {
+  P: defaultProject(), id: null, dirty: false, tab: 'size', piece: 'back',
+  chart: { cell: 14, showKnit: true, tint: true, ratio: false, center: true },
+  print: { cell: 4, ratio: false, cover: true, schem: true, text: true, motifs: true, charts: true },
+  projects: [], motifs: [], workers: ['지영'], worker: '', filterMine: false,
+  C: null, T: null, err: null, rowSel: null, editor: null, store: 'local', dl: null,
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function allMotifs() { return BUILTIN_MOTIFS.concat(S.motifs.map(m => ({ ...m, custom: true }))); }
+function getPath(o, p) { return p.split('.').reduce((a, k) => a == null ? a : a[k], o); }
+function setPath(o, p, v) { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k]); a[ks[ks.length - 1]] = v; }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2600); }
+
+/* ===================== 저장소 ===================== */
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem('kowadan.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('kowadan.' + k, JSON.stringify(v)); } catch (e) { } },
+};
+const Store = {
+  db: null, unsubs: [],
+  async init() {
+    S.projects = LS.get('projects', []);
+    S.motifs = LS.get('motifs', []);
+    S.workers = LS.get('workers', ['작업자 1', '작업자 2']);
+    S.worker = LS.get('worker', S.workers[0]);
+    const draft = LS.get('draft', null);
+    if (draft && draft.P) { S.P = migrate(draft.P); S.id = draft.id; S.dirty = !!draft.dirty; }
+    renderAll();
+    try {
+      if (window.claude && window.claude.use) {
+        const db = await window.claude.use('db');
+        if (db) { this.db = db; S.store = 'db'; this.subscribe(); renderHeader(); }
+      }
+    } catch (e) { }
+    try { if (window.claude && window.claude.use) { S.dl = await window.claude.use('downloads'); if (S.tab === 'print') renderTab(); } } catch (e) { S.dl = null; }
+  },
+  subscribe() {
+    const db = this.db;
+    const timer = setTimeout(() => toast('공유 저장소 응답이 늦습니다. 이 기기 저장본으로 계속합니다.'), 10000);
+    this.unsubs.push(db.collection('projects').onSnapshot(snap => {
+      clearTimeout(timer);
+      S.projects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      LS.set('projects', S.projects);
+      if (S.tab === 'proj') renderTab();
+    }, () => { clearTimeout(timer); }));
+    this.unsubs.push(db.collection('motifs').onSnapshot(snap => {
+      S.motifs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      LS.set('motifs', S.motifs);
+      recompute();
+    }, () => { }));
+    this.unsubs.push(db.doc('settings/workers').onSnapshot(d => {
+      if (d.exists && Array.isArray(d.data().names) && d.data().names.length) { S.workers = d.data().names; LS.set('workers', S.workers); if (!S.workers.includes(S.worker)) S.worker = S.workers[0]; renderHeader(); if (S.tab === 'proj') renderTab(); }
+    }, () => { }));
+  },
+  async saveProject(id, rec) {
+    const i = S.projects.findIndex(p => p.id === id);
+    if (i >= 0) S.projects[i] = { id, ...rec }; else S.projects.push({ id, ...rec });
+    LS.set('projects', S.projects);
+    if (this.db) await this.db.collection('projects').doc(id).set(rec);
+  },
+  async deleteProject(id) {
+    S.projects = S.projects.filter(p => p.id !== id); LS.set('projects', S.projects);
+    if (this.db) await this.db.collection('projects').doc(id).delete();
+  },
+  async saveMotif(m) {
+    const { id, custom, ...rec } = m;
+    const i = S.motifs.findIndex(x => x.id === id);
+    if (i >= 0) S.motifs[i] = { id, ...rec }; else S.motifs.push({ id, ...rec });
+    LS.set('motifs', S.motifs);
+    if (this.db) await this.db.collection('motifs').doc(id).set(rec);
+  },
+  async deleteMotif(id) {
+    S.motifs = S.motifs.filter(m => m.id !== id); LS.set('motifs', S.motifs);
+    if (this.db) await this.db.collection('motifs').doc(id).delete();
+  },
+  async saveWorkers() { LS.set('workers', S.workers); if (this.db) await this.db.doc('settings/workers').set({ names: S.workers }); },
+};
+function migrate(p) {
+  const d = defaultProject();
+  const out = { ...d, ...p };
+  ['body', 'ease', 'design', 'gauge', 'pattern'].forEach(k => out[k] = { ...d[k], ...(p[k] || {}) });
+  return out;
+}
+function saveDraft() { LS.set('draft', { P: S.P, id: S.id, dirty: S.dirty }); }
+async function saveCurrent() {
+  if (!S.id) S.id = uid();
+  const rec = { name: S.P.name || '이름 없는 도안', owner: S.worker, updated: Date.now(), data: JSON.parse(JSON.stringify(S.P)) };
+  try { await Store.saveProject(S.id, rec); S.dirty = false; saveDraft(); renderHeader(); toast(Store.db ? '공유 저장소에 저장했습니다.' : '이 기기에 저장했습니다.'); }
+  catch (e) { toast('저장하지 못했습니다: ' + (e && e.code ? e.code : '오류')); }
+}
+
+/* ===================== 계산 ===================== */
+let rcT = null;
+function touch() { S.dirty = true; saveDraft(); updateSaveState(); clearTimeout(rcT); rcT = setTimeout(recompute, 220); }
+function recompute() {
+  try {
+    const P = S.P;
+    const bad = [];
+    ['chest', 'hip', 'shoulder', 'armDepth', 'neckW', 'armLen', 'upperArm', 'wrist'].forEach(k => { if (!(P.body[k] > 0)) bad.push(k); });
+    if (!(P.gauge.st > 0) || !(P.gauge.row > 0)) bad.push('게이지');
+    if (!(P.design.length > 0)) bad.push('총장');
+    if (bad.length) { S.err = '입력값을 확인하세요. 0보다 큰 숫자가 필요합니다.'; S.C = null; }
+    else { S.C = compute(P, allMotifs()); S.T = buildText(P, S.C); S.err = null; }
+  } catch (e) { S.err = '계산 중 오류가 발생했습니다: ' + e.message; S.C = null; console.error(e); }
+  if (S.C && !S.C.pieces.find(p => p.id === S.piece)) S.piece = S.C.pieces[0].id;
+  renderTab(true);
+}
+
+/* ===================== 화면: 공통 ===================== */
+const TABS = [['proj', '프로젝트'], ['size', '치수'], ['design', '디자인'], ['motif', '무늬'], ['chart', '차트'], ['schem', '도식화'], ['text', '서술형'], ['print', '출력']];
+function renderAll() {
+  $('#app').innerHTML = `
+  <header class="top">
+    <div class="brand"><span class="logo">코와단</span><span class="sub">대바늘 도안 설계</span></div>
+    <div class="hdr" id="hdr"></div>
+  </header>
+  <nav class="tabs" id="tabs">${TABS.map(([k, n]) => `<button data-tab="${k}">${n}</button>`).join('')}</nav>
+  <main id="main"></main>
+  <div id="toast" class="toast"></div>
+  <div id="modal" class="modal"></div>`;
+  $('#tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) { S.tab = b.dataset.tab; LS.set('tab', S.tab); renderTab(); window.scrollTo(0, 0); } });
+  S.tab = LS.get('tab', 'size');
+  renderHeader();
+  recompute();
+}
+function renderHeader() {
+  const h = $('#hdr'); if (!h) return;
+  if (h.dataset.built && document.activeElement && document.activeElement.id === 'pname') { updateSaveState(); return; }
+  h.dataset.built = '1';
+  h.innerHTML = `
+    <input class="pname" id="pname" value="${esc(S.P.name)}" aria-label="도안 이름">
+    <select id="worker" aria-label="작업자">${S.workers.map(w => `<option ${w === S.worker ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select>
+    <button class="btn pri" id="saveBtn">${S.dirty ? '저장' : '저장됨'}</button>`;
+  $('#pname').oninput = e => { S.P.name = e.target.value; touch(); };
+  $('#worker').onchange = e => { S.worker = e.target.value; LS.set('worker', S.worker); if (S.tab === 'proj') renderTab(); };
+  $('#saveBtn').onclick = saveCurrent;
+  updateSaveState();
+}
+function updateSaveState() {
+  const b = $('#saveBtn'); if (!b) return;
+  b.textContent = S.dirty ? '저장' : '저장됨';
+  b.classList.toggle('dirty', S.dirty);
+  const n = $('#pname'); if (n && document.activeElement !== n && n.value !== S.P.name) n.value = S.P.name;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === S.tab));
+}
+function renderTab(fromCompute) {
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
+  const m = $('#main'); if (!m) return;
+  // 입력 화면은 계산 때마다 다시 그리지 않음 (포커스 유지)
+  if (fromCompute && (S.tab === 'size' || S.tab === 'design')) { updateLive(); return; }
+  if (fromCompute && S.tab === 'motif' && S.editor) return;
+  const f = { proj: viewProj, size: viewSize, design: viewDesign, motif: viewMotif, chart: viewChart, schem: viewSchem, text: viewText, print: viewPrint }[S.tab];
+  m.innerHTML = f();
+  bindInputs(m);
+  ({ proj: bindProj, size: bindSize, design: () => { }, motif: bindMotif, chart: bindChart, schem: () => { }, text: bindText, print: bindPrint })[S.tab]();
+  updateLive();
+}
+function warnBox() {
+  if (S.err) return `<div class="alert">${esc(S.err)}</div>`;
+  if (!S.C || !S.C.warnings.length) return '';
+  return `<div class="alert"><b>확인이 필요합니다</b><ul>${S.C.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
+}
+function num(path, label, unit, opt = {}) {
+  const v = getPath(S.P, path);
+  return `<label class="fld${opt.wide ? ' wide' : ''}"><span class="lb">${label}${opt.help ? `<i class="hp">${opt.help}</i>` : ''}</span>
+    <span class="iw"><input type="number" inputmode="decimal" step="${opt.step || 0.5}" data-path="${path}" data-num="1" value="${v ?? ''}">${unit ? `<em>${unit}</em>` : ''}</span></label>`;
+}
+function txt(path, label, opt = {}) {
+  return `<label class="fld${opt.wide ? ' wide' : ''}"><span class="lb">${label}</span><span class="iw"><input type="text" data-path="${path}" value="${esc(getPath(S.P, path))}" placeholder="${opt.ph || ''}"></span></label>`;
+}
+function seg(path, label, opts) {
+  const v = getPath(S.P, path);
+  return `<div class="fld wide"><span class="lb">${label}</span><div class="seg" data-seg="${path}">${opts.map(([k, n]) => `<button type="button" data-v="${k}" class="${String(v) === String(k) ? 'on' : ''}">${n}</button>`).join('')}</div></div>`;
+}
+function sel(path, label, opts) {
+  const v = getPath(S.P, path);
+  return `<label class="fld"><span class="lb">${label}</span><span class="iw"><select data-path="${path}">${opts.map(([k, n]) => `<option value="${esc(k)}" ${String(v) === String(k) ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></span></label>`;
+}
+function chk(path, label) {
+  return `<label class="chk"><input type="checkbox" data-path="${path}" ${getPath(S.P, path) ? 'checked' : ''}><span>${label}</span></label>`;
+}
+function bindInputs(root) {
+  root.querySelectorAll('input[data-path], select[data-path]').forEach(el => {
+    const ev = el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input';
+    el.addEventListener(ev, () => {
+      let v = el.type === 'checkbox' ? el.checked : el.value;
+      if (el.dataset.num) v = v === '' ? 0 : parseFloat(v);
+      if (el.tagName === 'SELECT' && v === '') v = null;
+      setPath(S.P, el.dataset.path, v);
+      touch();
+    });
+  });
+  root.querySelectorAll('[data-seg]').forEach(g => g.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const path = g.dataset.seg, cur = getPath(S.P, path);
+    let v = b.dataset.v; if (v === 'true') v = true; if (v === 'false') v = false;
+    if (path === 'gauge.unit' && v !== cur) { const f = v === 'cm' ? 0.1 : 10; S.P.gauge.st = +(S.P.gauge.st * f).toFixed(2); S.P.gauge.row = +(S.P.gauge.row * f).toFixed(2); }
+    setPath(S.P, path, v);
+    g.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    touch();
+    if (path === 'garment' || path === 'neck' || path === 'gauge.unit' || path === 'sleeve') renderTab();
+  }));
+}
+function updateLive() {
+  // 완성 목표치, 경고 등 즉시 갱신
+  document.querySelectorAll('[data-live]').forEach(el => {
+    const k = el.dataset.live;
+    if (k.startsWith('t.')) { const f = k.slice(2); const v = (S.P.body[f] || 0) + (S.P.ease[f] || 0); el.textContent = fmt(v); }
+    if (k === 'warn') el.innerHTML = warnBox();
+    if (k === 'summary') el.innerHTML = summaryHTML();
+  });
+}
+function summaryHTML() {
+  const C = S.C; if (!C) return '';
+  const f = C.finished;
+  return `<div class="sum"><div><b>완성 가슴둘레</b>${fmt(f.chest)}cm</div><div><b>총장</b>${fmt(f.length)}cm</div><div><b>소매길이</b>${fmt(f.sleeveLen)}cm</div><div><b>예상 실</b>${C.yarnG ? Math.ceil(C.yarnG / 10) * 10 + 'g' : '스와치 무게 입력 시'}</div></div>`;
+}
+
+/* ===================== 탭: 프로젝트 ===================== */
+function viewProj() {
+  const list = S.projects.filter(p => !S.filterMine || p.owner === S.worker).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  return `
+  <section class="card">
+    <h2>작업자</h2>
+    <p class="desc">두 분이 함께 쓰실 수 있도록 작업자를 나눠 둡니다. 저장할 때 현재 작업자 이름이 함께 기록됩니다.</p>
+    <div class="chips">${S.workers.map((w, i) => `<span class="chip ${w === S.worker ? 'on' : ''}" data-w="${i}">${esc(w)}</span>`).join('')}</div>
+    <div class="row"><input id="wname" placeholder="작업자 이름" class="inp"><button class="btn" id="wadd">추가</button><button class="btn" id="wren">현재 작업자 이름 바꾸기</button></div>
+    <p class="desc small">저장 위치: ${Store.db ? '공유 저장소 (이 도안 앱을 함께 쓰는 사람 모두 볼 수 있음)' : '이 기기 브라우저 (백업은 출력 탭의 JSON 백업 사용)'}</p>
+  </section>
+  <section class="card">
+    <div class="hrow"><h2>도안 목록</h2>
+      <div class="row"><label class="chk"><input type="checkbox" id="fmine" ${S.filterMine ? 'checked' : ''}><span>내 도안만</span></label>
+      <button class="btn pri" id="pnew">새 도안</button><button class="btn" id="pdup">현재 도안 복제</button></div></div>
+    ${list.length ? `<div class="plist">${list.map(p => `
+      <div class="pitem ${p.id === S.id ? 'cur' : ''}">
+        <div class="pinfo"><b>${esc(p.name)}</b><span>${esc(p.owner || '-')}, ${new Date(p.updated || 0).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+        <span>${p.data ? `${p.data.garment === 'cardigan' ? '가디건' : '풀오버'}, ${p.data.neck === 'v' ? 'V넥' : '라운드넥'}, 가슴 ${p.data.body.chest}cm` : ''}</span></div>
+        <div class="pact"><button class="btn" data-open="${p.id}">열기</button><button class="btn ghost" data-del="${p.id}">삭제</button></div>
+      </div>`).join('')}</div>` : `<p class="desc">저장된 도안이 없습니다. 치수를 입력하고 위의 저장 버튼을 누르면 여기에 쌓입니다.</p>`}
+  </section>
+  <section class="card">
+    <h2>메모</h2>
+    <textarea data-path="memo" class="memo" placeholder="실 색상 번호, 고객 요청 사항, 수정 이력 등">${esc(S.P.memo)}</textarea>
+  </section>`;
+}
+function bindProj() {
+  document.querySelectorAll('[data-w]').forEach(el => el.onclick = () => { S.worker = S.workers[+el.dataset.w]; LS.set('worker', S.worker); renderHeader(); renderTab(); });
+  $('#wadd').onclick = async () => { const n = $('#wname').value.trim(); if (!n || S.workers.includes(n)) return; S.workers.push(n); S.worker = n; LS.set('worker', n); await Store.saveWorkers().catch(() => { }); renderHeader(); renderTab(); };
+  $('#wren').onclick = async () => { const n = $('#wname').value.trim(); if (!n) return toast('바꿀 이름을 입력하세요.'); const i = S.workers.indexOf(S.worker); S.workers[i] = n; S.worker = n; LS.set('worker', n); await Store.saveWorkers().catch(() => { }); renderHeader(); renderTab(); };
+  $('#fmine').onchange = e => { S.filterMine = e.target.checked; renderTab(); };
+  $('#pnew').onclick = () => ask('새 도안을 만들까요? 저장하지 않은 변경은 사라집니다.', () => { S.P = defaultProject(); S.id = null; S.dirty = true; saveDraft(); renderHeader(); S.tab = 'size'; recompute(); renderTab(); });
+  $('#pdup').onclick = () => { S.P = JSON.parse(JSON.stringify(S.P)); S.P.name += ' 사본'; S.id = null; S.dirty = true; saveDraft(); renderHeader(); toast('복제했습니다. 저장을 누르면 새 도안으로 저장됩니다.'); };
+  document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
+    const p = S.projects.find(x => x.id === b.dataset.open); if (!p) return;
+    const go = () => { S.P = migrate(p.data || {}); S.id = p.id; S.dirty = false; saveDraft(); renderHeader(); S.tab = 'chart'; recompute(); renderTab(); };
+    S.dirty ? ask('저장하지 않은 변경이 있습니다. 그래도 열까요?', go) : go();
+  });
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    const p = S.projects.find(x => x.id === b.dataset.del);
+    ask(`"${p.name}" 도안을 삭제할까요? 되돌릴 수 없습니다.`, async () => { await Store.deleteProject(p.id).catch(() => { }); if (S.id === p.id) S.id = null; renderTab(); });
+  });
+  const ta = document.querySelector('textarea[data-path]');
+  ta.oninput = () => { S.P.memo = ta.value; touch(); };
+}
+function ask(msg, yes) {
+  const m = $('#modal');
+  m.innerHTML = `<div class="mbox"><p>${esc(msg)}</p><div class="row end"><button class="btn" id="mno">취소</button><button class="btn pri" id="myes">확인</button></div></div>`;
+  m.classList.add('on');
+  $('#mno').onclick = () => m.classList.remove('on');
+  $('#myes').onclick = () => { m.classList.remove('on'); yes(); };
+}
+
+/* ===================== 탭: 치수 ===================== */
+const BODY_ROWS = [
+  ['chest', '가슴둘레', '가슴의 가장 높은 곳을 수평으로 한 바퀴'],
+  ['hip', '엉덩이둘레(밑단)', '밑단이 오는 위치의 둘레. 밑단 폭 계산에 씀'],
+  ['shoulder', '어깨너비', '왼쪽 어깨끝점에서 오른쪽 어깨끝점까지 뒤쪽으로'],
+  ['armDepth', '진동깊이', '어깨 가장 높은 곳(옆목점 높이)에서 겨드랑이까지 수직'],
+  ['neckW', '목너비', '좌우 옆목점 사이의 직선 거리'],
+  ['armLen', '팔길이', '어깨끝점에서 손목까지(소맷부리 포함 소매길이 기준)'],
+  ['upperArm', '위팔둘레', '팔에서 가장 굵은 곳의 둘레'],
+  ['wrist', '손목둘레', '손목 둘레'],
+];
+function viewSize() {
+  const P = S.P;
+  return `
+  <div data-live="warn"></div>
+  <section class="card">
+    <div class="hrow"><h2>신체 치수와 여유분</h2>
+      <div class="chips">${Object.keys(PRESETS).map(k => `<span class="chip ${P.size === k ? 'on' : ''}" data-preset="${k}">${k}</span>`).join('')}<span class="chip ${P.size === 'custom' ? 'on' : ''}" data-preset="custom">직접 입력</span></div></div>
+    <p class="desc">신체 치수는 여유를 넣지 않은 몸 치수입니다. 여유분을 따로 넣으면 완성 목표 치수가 바로 계산됩니다. 사이즈 버튼은 여성 표준 체형 참고값을 채워 줍니다.</p>
+    <div class="mtable">
+      <div class="mh"><span>부위</span><span>신체 (cm)</span><span>여유 (cm)</span><span>완성 목표</span></div>
+      ${BODY_ROWS.map(([k, n, h]) => `<div class="mr"><span class="mn">${n}<i>${h}</i></span>
+        <span><input type="number" inputmode="decimal" step="0.5" data-path="body.${k}" data-num="1" value="${P.body[k]}"></span>
+        <span><input type="number" inputmode="decimal" step="0.5" data-path="ease.${k}" data-num="1" value="${P.ease[k]}"></span>
+        <span class="mt" data-live="t.${k}"></span></div>`).join('')}
+    </div>
+  </section>
+  <section class="card">
+    <h2>디자인 치수</h2>
+    <div class="grid">
+      ${num('design.length', '총장', 'cm', { help: '옆목점에서 밑단까지' })}
+      ${num('design.ribH', '밑단 고무단 길이', 'cm')}
+      ${num('design.cuffH', '소맷부리 길이', 'cm')}
+      ${num('design.neckbandH', '넥밴드 높이', 'cm')}
+      ${S.P.neck === 'v' ? num('design.vDepth', 'V넥 깊이', 'cm', { help: '옆목점 높이에서 V 끝까지' }) : num('design.frontNeckD', '앞목 깊이', 'cm')}
+      ${num('design.backNeckD', '뒷목 깊이', 'cm')}
+      ${num('design.shoulderDrop', '어깨 경사(처짐)', 'cm')}
+      ${num('design.capTop', '소매산 윗폭', 'cm')}
+      ${S.P.garment === 'cardigan' ? num('design.bandW', '앞단 폭', 'cm') + num('design.buttons', '단추 개수', '개', { step: 1 }) : ''}
+    </div>
+  </section>
+  <section class="card">
+    <h2>게이지와 재료</h2>
+    ${seg('gauge.unit', '게이지 단위', [['cm', '1cm 기준'], ['10cm', '10cm 기준']])}
+    <div class="grid">
+      ${num('gauge.st', `코 (${P.gauge.unit === 'cm' ? '1cm' : '10cm'} 안)`, '코', { step: P.gauge.unit === 'cm' ? 0.05 : 0.5 })}
+      ${num('gauge.row', `단 (${P.gauge.unit === 'cm' ? '1cm' : '10cm'} 안)`, '단', { step: P.gauge.unit === 'cm' ? 0.05 : 0.5 })}
+      ${num('gauge.dens', '꽈배기 수축 비율', '배', { step: 0.05, help: '같은 코 수일 때 꽈배기가 메리야스보다 좁아지는 비율. 보통 1.15~1.3' })}
+      ${num('gauge.swatchW', '스와치 무게(10x10cm)', 'g', { step: 0.5, help: '실 사용량 계산용' })}
+      ${num('gauge.needle', '몸판 바늘', 'mm', { step: 0.25 })}
+      ${num('gauge.ribNeedle', '고무단 바늘', 'mm', { step: 0.25 })}
+      ${txt('gauge.yarn', '실 이름', { ph: '예: 메리노 울 100%, 아란' })}
+      ${num('gauge.ballW', '1볼 무게', 'g', { step: 5 })}
+    </div>
+  </section>
+  <div data-live="summary"></div>`;
+}
+function bindSize() {
+  document.querySelectorAll('[data-preset]').forEach(el => el.onclick = () => {
+    const k = el.dataset.preset;
+    S.P.size = k;
+    if (PRESETS[k]) { const p = PRESETS[k]; Object.keys(S.P.body).forEach(f => { if (p[f] !== undefined) S.P.body[f] = p[f]; }); S.P.design.length = p.length; }
+    touch(); renderTab();
+  });
+}
+
+/* ===================== 탭: 디자인 ===================== */
+function motifOptions(withNone) {
+  const ms = allMotifs();
+  return [...(withNone ? [['', '없음']] : []), ...ms.map(m => [m.id, `${m.custom ? '[내 무늬] ' : ''}${m.name} (${expandMotif(m).w}코)`])];
+}
+function viewDesign() {
+  const P = S.P;
+  return `
+  <div data-live="warn"></div>
+  <section class="card">
+    <h2>옷 형태</h2>
+    ${seg('garment', '종류', [['pullover', '풀오버'], ['cardigan', '가디건']])}
+    ${seg('neck', '목선', [['round', '라운드넥'], ['v', 'V넥']])}
+    ${seg('sleeve', '소매', [['setin', '셋인 슬리브'], ['drop', '드롭숄더']])}
+    ${seg('design.shoulderMethod', '어깨 처리', [['bo', '계단식 덮어씌우기'], ['sr', '되돌아뜨기 후 빼뜨기 잇기']])}
+  </section>
+  <section class="card">
+    <h2>바탕과 고무단</h2>
+    ${seg('pattern.bg', '바탕 무늬', [['st', '메리야스'], ['rev', '안메리야스'], ['seed', '멍석뜨기'], ['garter', '가터']])}
+    ${seg('pattern.rib', '고무단', [['1x1', '1코 고무'], ['2x2', '2코 고무'], ['1x1t', '1코 꼬아 고무'], ['garter', '가터']])}
+  </section>
+  <section class="card">
+    <h2>무늬 배치</h2>
+    <p class="desc">중앙 무늬를 가운데에 두고, 양옆 무늬를 좌우 대칭으로 놓습니다. 왼쪽에 놓이는 무늬는 교차 방향을 자동으로 뒤집어 대칭을 맞춥니다.${P.garment === 'cardigan' ? ' 가디건은 앞판마다 중앙 무늬 하나를 놓습니다.' : ''}</p>
+    <div class="grid">
+      ${sel('pattern.center', '중앙 무늬', motifOptions(true))}
+      ${sel('pattern.side', '양옆 무늬', motifOptions(true))}
+      ${num('pattern.gap', '중앙과 양옆 사이 바탕', '코', { step: 1 })}
+      ${num('pattern.sep', '무늬 양쪽 안뜨기', '코', { step: 1 })}
+    </div>
+    <div class="row wrap">${chk('pattern.applyBack', '뒤판에도 같은 무늬')}${chk('pattern.applySleeve', '소매 중앙에 중앙 무늬')}</div>
+  </section>
+  <div data-live="summary"></div>`;
+}
+
+/* ===================== 탭: 무늬 ===================== */
+const PALETTE = ['k', 'p', 'tk', 'yo', 'k2tog', 'ssk', 'sk2p', 'mb', 'LC1/1', 'RC1/1', 'LC2/2', 'RC2/2', 'LC3/3', 'RC3/3', 'LC4/4', 'RC4/4', 'LPC2/1', 'RPC2/1', 'LC2/1', 'RC2/1', 'LPC2/2', 'RPC2/2', 'LPC1/1', 'RPC1/1'];
+function viewMotif() {
+  if (S.editor) return viewEditor();
+  const ms = allMotifs();
+  return `
+  <section class="card">
+    <div class="hrow"><h2>무늬 라이브러리</h2><button class="btn pri" id="mnew">새 무늬 그리기</button></div>
+    <p class="desc">기본 무늬는 복제해서 고칠 수 있습니다. 직접 만든 무늬는 ${Store.db ? '공유 저장소에 저장되어 두 분 모두 쓸 수 있습니다' : '이 기기에 저장됩니다'}.</p>
+    <div class="mgrid">${ms.map(m => {
+      const ex = expandMotif(m);
+      const cs = Math.max(8, Math.min(14, Math.floor(150 / Math.max(ex.w, 6))));
+      return `<div class="mcard"><div class="mhead"><b>${esc(m.name)}</b><span>${ex.w}코 ${ex.h}단${m.custom ? ', 내 무늬' : ''}</span></div>
+      <div class="mimg">${chartSVG(motifPiece(m), { cw: cs, ch: cs, showKnit: true })}</div>
+      <div class="row"><button class="btn" data-medit="${m.id}">${m.custom ? '편집' : '복제하여 편집'}</button>${m.custom ? `<button class="btn ghost" data-mdel="${m.id}">삭제</button>` : ''}</div></div>`;
+    }).join('')}</div>
+  </section>`;
+}
+function editorFrom(m) {
+  const ex = expandMotif(m);
+  return { id: m.custom ? m.id : null, name: m.custom ? m.name : m.name + ' 변형', w: ex.w, h: ex.h, cells: ex.cells.map(r => r.map(v => typeof v === 'object' ? { ...v } : v)), tool: 'p' };
+}
+function editorTokens(E) {
+  return E.cells.map(row => { const out = []; for (let c = 0; c < row.length; c++) { const v = row[c]; if (typeof v === 'object') { if (v.j === 0) out.push(v.tok); } else out.push(v); } return out; });
+}
+function viewEditor() {
+  const E = S.editor;
+  const m = { rows: editorTokens(E) };
+  const errs = motifCheck(m);
+  const cs = Math.max(16, Math.min(30, Math.floor(Math.min(window.innerWidth - 80, 700) / E.w)));
+  E.cs = cs;
+  return `
+  <section class="card">
+    <div class="hrow"><h2>무늬 편집</h2><div class="row"><button class="btn" id="ecancel">닫기</button><button class="btn pri" id="esave">무늬 저장</button></div></div>
+    <div class="grid">
+      <label class="fld"><span class="lb">무늬 이름</span><span class="iw"><input id="ename" value="${esc(E.name)}"></span></label>
+      <label class="fld"><span class="lb">폭</span><span class="iw"><input id="ew" type="number" min="1" max="60" value="${E.w}"><em>코</em></span></label>
+      <label class="fld"><span class="lb">높이</span><span class="iw"><input id="eh" type="number" min="1" max="80" value="${E.h}"><em>단</em></span></label>
+    </div>
+    <p class="desc">아래 기호를 고른 뒤 칸을 누르세요. 교차뜨기는 누른 칸부터 오른쪽으로 놓이며 홀수 단(겉면)에만 둡니다. 차트는 겉면에서 본 모양입니다.</p>
+    <div class="pal">${PALETTE.map(t => `<button class="${E.tool === t ? 'on' : ''}" data-tool="${t}" title="${esc(symName(t))}">${symbolSVG(t, 20)}<span>${esc(symName(t))}</span></button>`).join('')}</div>
+    <div class="row wrap"><button class="btn" id="efill">안면 단 자동 채우기</button><button class="btn" id="eclear">모두 겉뜨기로</button><button class="btn" id="eclearp">모두 안뜨기로</button></div>
+    ${errs.length ? `<div class="alert"><ul>${errs.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>` : `<div class="ok">무늬가 올바릅니다.</div>`}
+    <div class="ecanvas" id="ecanvas">${chartSVG(motifPiece(m), { cw: cs, ch: cs, showKnit: true })}</div>
+    <h3>단별 설명 미리보기</h3>
+    <ol class="rows">${motifRowsText(m).map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+  </section>`;
+}
+function bindMotif() {
+  if (S.editor) return bindEditor();
+  $('#mnew').onclick = () => { S.editor = { id: null, name: '새 무늬', w: 8, h: 8, cells: Array.from({ length: 8 }, () => Array(8).fill('k')), tool: 'LC2/2' }; renderTab(); };
+  document.querySelectorAll('[data-medit]').forEach(b => b.onclick = () => { const m = allMotifs().find(x => x.id === b.dataset.medit); S.editor = editorFrom(m); renderTab(); });
+  document.querySelectorAll('[data-mdel]').forEach(b => b.onclick = () => { const m = allMotifs().find(x => x.id === b.dataset.mdel); ask(`"${m.name}" 무늬를 삭제할까요?`, async () => { await Store.deleteMotif(m.id).catch(() => { }); recompute(); renderTab(); }); });
+}
+function bindEditor() {
+  const E = S.editor;
+  $('#ename').oninput = e => E.name = e.target.value;
+  const resize = () => {
+    const w = clamp(parseInt($('#ew').value) || 1, 1, 60), h = clamp(parseInt($('#eh').value) || 1, 1, 80);
+    const cells = Array.from({ length: h }, (_, r) => Array.from({ length: w }, (_, c) => (E.cells[r] && E.cells[r][c] !== undefined) ? E.cells[r][c] : 'k'));
+    // 잘린 교차 정리
+    cells.forEach(row => row.forEach((v, c) => { if (typeof v === 'object') { const x = parseTok(v.tok); if (c - v.j + x.w > w) row[c] = 'k'; } }));
+    E.w = w; E.h = h; E.cells = cells; renderTab();
+  };
+  $('#ew').onchange = resize; $('#eh').onchange = resize;
+  document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => { E.tool = b.dataset.tool; document.querySelectorAll('[data-tool]').forEach(x => x.classList.toggle('on', x === b)); });
+  $('#ecancel').onclick = () => { S.editor = null; renderTab(); };
+  $('#eclear').onclick = () => { E.cells = E.cells.map(r => r.map(() => 'k')); renderTab(); };
+  $('#eclearp').onclick = () => { E.cells = E.cells.map(r => r.map(() => 'p')); renderTab(); };
+  $('#efill').onclick = () => {
+    for (let r = 1; r < E.h; r += 2) {
+      const below = E.cells[r - 1];
+      E.cells[r] = below.map(v => {
+        if (typeof v === 'object') return crossOut(v.tok, v.j);
+        if (v === 'p') return 'p';
+        if (v === 'tk') return 'tk';
+        return 'k';
+      });
+    }
+    renderTab();
+  };
+  $('#esave').onclick = async () => {
+    const rows = editorTokens(E);
+    const errs = motifCheck({ rows });
+    if (errs.length) return toast('무늬에 확인할 점이 있어 저장하지 않았습니다.');
+    const m = { id: E.id || 'u' + uid(), name: E.name || '내 무늬', cat: '내 무늬', rows, owner: S.worker, updated: Date.now() };
+    try { await Store.saveMotif(m); toast('무늬를 저장했습니다.'); } catch (e) { toast('저장하지 못했습니다.'); }
+    S.editor = null; recompute(); renderTab();
+  };
+  const cv = $('#ecanvas');
+  cv.onclick = e => {
+    const svg = cv.querySelector('svg'); const rect = svg.getBoundingClientRect();
+    const pc = motifPiece({ rows: editorTokens(E) });
+    const G = chartGeom(pc, { cw: E.cs, ch: E.cs });
+    const sx = svg.viewBox.baseVal.width / rect.width;
+    const x = (e.clientX - rect.left) * sx, y = (e.clientY - rect.top) * sx;
+    const c = Math.floor((x - G.mL) / E.cs), rr = Math.floor((y - G.mT) / E.cs);
+    const r = E.h - 1 - rr;
+    if (c < 0 || c >= E.w || r < 0 || r >= E.h) return;
+    placeTool(E, r, c, E.tool);
+    renderTab();
+  };
+}
+function placeTool(E, r, c, tool) {
+  const row = E.cells[r];
+  const clearAt = cc => { const v = row[cc]; if (typeof v === 'object') { const x = parseTok(v.tok); const st = cc - v.j; for (let j = 0; j < x.w; j++) row[st + j] = 'k'; } };
+  const x = parseTok(tool);
+  if (!x) { clearAt(c); row[c] = tool; return; }
+  if (r % 2 === 1) { toast('교차뜨기는 홀수 단(겉면)에 두세요.'); return; }
+  if (c + x.w > E.w) { toast(`이 교차는 ${x.w}칸이 필요합니다.`); return; }
+  for (let j = 0; j < x.w; j++) clearAt(c + j);
+  for (let j = 0; j < x.w; j++) row[c + j] = { tok: tool, j };
+}
+
+/* ===================== 탭: 차트 ===================== */
+function viewChart() {
+  const C = S.C;
+  if (!C) return warnBox();
+  const pc = C.pieces.find(p => p.id === S.piece) || C.pieces[0];
+  const o = S.chart;
+  const ch = o.ratio ? o.cell * C.gs / C.gr : o.cell;
+  const syms = usedSymbols([pc]);
+  return `
+  <div data-live="warn"></div>
+  <section class="card">
+    <div class="chips">${C.pieces.map(p => `<span class="chip ${p.id === pc.id ? 'on' : ''}" data-piece="${p.id}">${esc(p.name)}</span>`).join('')}</div>
+    <div class="row wrap ctl">
+      <label class="zoom">크기 <input type="range" min="6" max="28" value="${o.cell}" id="zoom"></label>
+      <label class="chk"><input type="checkbox" data-c="showKnit" ${o.showKnit ? 'checked' : ''}><span>겉뜨기 기호</span></label>
+      <label class="chk"><input type="checkbox" data-c="tint" ${o.tint ? 'checked' : ''}><span>무늬 색</span></label>
+      <label class="chk"><input type="checkbox" data-c="center" ${o.center ? 'checked' : ''}><span>중심선</span></label>
+      <label class="chk"><input type="checkbox" data-c="ratio" ${o.ratio ? 'checked' : ''}><span>게이지 비율 칸</span></label>
+    </div>
+    <p class="desc small">${esc(pc.name)}: 시작 ${pc.kind === 'sleeve' ? pc.info.Ncuff : pc.info.Nh}코, 총 ${pc.total}단. 차트의 단을 누르면 그 단을 글로 읽어 줍니다.</p>
+    <div id="rowtxt" class="rowtxt">${S.rowSel && S.rowSel.piece === pc.id ? rowTextHTML(pc, S.rowSel.r) : ''}</div>
+    <div class="chartbox" id="chartbox">${chartSVG(pc, { cw: o.cell, ch, showKnit: o.showKnit, tint: o.tint, center: o.center })}</div>
+  </section>
+  <section class="card">
+    <h2>기호</h2>
+    <div class="legend">${syms.map(s => `<div class="lg">${symbolSVG(s, 22)}<span>${esc(symName(s))}${s === 'k' ? ' (빈 칸도 겉뜨기)' : ''}</span></div>`).join('')}</div>
+    <p class="desc small">홀수 단은 겉면(오른쪽에서 왼쪽), 짝수 단은 안면(왼쪽에서 오른쪽)입니다. 안면에서는 기호의 반대로 뜹니다. 굵은 선은 10코, 10단마다, 붉은 선은 고무단 끝입니다.</p>
+  </section>`;
+}
+function rowTextHTML(pc, r) {
+  const row = pc.codes[r]; if (!row) return '';
+  const rs = r % 2 === 1;
+  const seq = [];
+  const idx = []; row.forEach((v, c) => { if (v !== null && v !== undefined && v !== '>') idx.push(c); });
+  (rs ? idx.slice().reverse() : idx).forEach(c => seq.push(row[c]));
+  const live = row.filter(v => v !== null && v !== undefined).length;
+  return `<b>${r}단 (${rs ? '겉면, 오른쪽부터' : '안면, 왼쪽부터'}, ${live}코)</b> ${esc(runsText(seq, !rs))}`;
+}
+function bindChart() {
+  document.querySelectorAll('[data-piece]').forEach(el => el.onclick = () => { S.piece = el.dataset.piece; S.rowSel = null; renderTab(); });
+  $('#zoom').onchange = e => { S.chart.cell = +e.target.value; LS.set('chart', S.chart); renderTab(); };
+  document.querySelectorAll('[data-c]').forEach(el => el.onchange = () => { S.chart[el.dataset.c] = el.checked; LS.set('chart', S.chart); renderTab(); });
+  const box = $('#chartbox');
+  requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; box.scrollLeft = box.scrollWidth; });
+  box.onclick = e => {
+    const svg = box.querySelector('svg'); if (!svg) return;
+    const pc = S.C.pieces.find(p => p.id === S.piece);
+    const o = S.chart, ch = o.ratio ? o.cell * S.C.gs / S.C.gr : o.cell;
+    const G = chartGeom(pc, { cw: o.cell, ch });
+    const rect = svg.getBoundingClientRect();
+    const y = (e.clientY - rect.top) * (svg.viewBox.baseVal.height / rect.height);
+    const rr = Math.floor((y - G.mT) / ch);
+    const r = G.r1 - rr;
+    if (r < 1 || r > pc.total) return;
+    S.rowSel = { piece: pc.id, r };
+    $('#rowtxt').innerHTML = rowTextHTML(pc, r);
+  };
+}
+
+/* ===================== 탭: 도식화 ===================== */
+function viewSchem() {
+  const C = S.C; if (!C) return warnBox();
+  const T = C.T, f = C.finished, P = S.P;
+  const tgt = { chest: C.T.chest, hem: C.T.hip, length: C.T.length, shoulder: C.isDrop ? null : C.T.shoulder, armDepth: C.T.armDepth, neckW: C.T.neckW, sleeveLen: C.T.armLen, upper: C.isDrop ? null : C.T.upper, cuff: C.T.wrist };
+  const names = { chest: '가슴둘레', hem: '밑단둘레', length: '총장', shoulder: '어깨너비', armDepth: '진동깊이', neckW: '목너비', sleeveLen: '소매길이', upper: '소매통', cuff: '소맷부리' };
+  const sign = v => (v > 0 ? '+' : v < 0 ? '-' : '') + fmt(Math.abs(v));
+  return `
+  <div data-live="warn"></div>
+  <section class="card">
+    <h2>도식화</h2>
+    <div class="schem">${schematicSVG(C, Math.min(window.innerWidth, 1180) - 70)}</div>
+  </section>
+  <section class="card">
+    <h2>완성 치수</h2>
+    <table class="tbl"><thead><tr><th>부위</th><th>목표</th><th>실제</th><th>차이</th></tr></thead><tbody>
+    ${Object.keys(names).map(k => `<tr><td>${names[k]}</td><td>${tgt[k] != null ? fmt(tgt[k]) : '-'}</td><td>${fmt(f[k])}</td><td>${tgt[k] != null ? sign(f[k] - tgt[k]) : '-'}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="desc small">실제 값은 코 수와 단 수를 정수로 맞춘 뒤 게이지로 되돌려 계산한 값입니다.${C.isDrop ? ' 드롭숄더는 어깨너비가 몸판 폭과 같고, 소매길이는 늘어진 어깨만큼 줄어듭니다.' : ''}</p>
+  </section>
+  <section class="card">
+    <h2>계산 내역</h2>
+    <table class="tbl"><tbody>
+      <tr><td>게이지</td><td>${fmt(C.gs * 10)}코 x ${fmt(C.gr * 10)}단 / 10cm, 꽈배기 수축 ${fmt(C.dens)}배</td></tr>
+      <tr><td>앞판 무늬 폭</td><td>${C.layFront.panelW}코 (교차 무늬 ${C.layFront.cableSts}코)</td></tr>
+      <tr><td>단 수</td><td>고무단 ${C.ribRows}단, 옆선 ${C.sideRows}단, 진동 ${C.ahRows}단, 총 ${C.totalRows}단</td></tr>
+      <tr><td>진동 줄임</td><td>${C.A > 0 ? `한쪽 ${C.A}코, 진동둘레(앞뒤) ${fmt(2 * C.ahLen)}cm` : '없음(드롭숄더)'}</td></tr>
+      ${C.capInfo ? `<tr><td>소매산</td><td>높이 ${fmt(C.capInfo.hc / C.gr)}cm, 소매산 둘레 ${fmt(C.capInfo.capTotal)}cm, 진동둘레와 차이 ${sign(C.capInfo.easeC)}cm (권장 0~3cm)</td></tr>` : ''}
+      <tr><td>어깨</td><td>한쪽 ${C.shSts}코, ${notation(C.shParts.map(a => ({ len: 2, amt: a })))}</td></tr>
+      <tr><td>넥밴드</td><td>목둘레 약 ${fmt(C.neckCirc)}cm, ${C.neckPick}코 줍기</td></tr>
+      <tr><td>실 사용량</td><td>${C.yarnG ? `약 ${Math.ceil(C.yarnG / 10) * 10}g (총 ${C.cells.toLocaleString()}코 기준, 여유 8% 포함)` : '스와치 무게를 넣으면 계산합니다'}</td></tr>
+    </tbody></table>
+  </section>`;
+}
+
+/* ===================== 탭: 서술형 ===================== */
+function textHTML(T) {
+  let html = '', inList = false;
+  T.forEach(b => {
+    if (b.t === 'li') { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${esc(b.s)}</li>`; return; }
+    if (inList) { html += '</ul>'; inList = false; }
+    const tag = { h1: 'h1', h2: 'h2', h3: 'h3', p: 'p', note: 'p' }[b.t];
+    html += `<${tag}>${esc(b.s)}</${tag}>`;
+  });
+  if (inList) html += '</ul>';
+  return html;
+}
+function textPlain(T) { return T.map(b => b.t === 'h1' ? `${b.s}\n` : b.t === 'h2' ? `\n[${b.s}]` : b.t === 'h3' ? `\n${b.s}` : b.t === 'li' ? `- ${b.s}` : b.s).join('\n'); }
+function viewText() {
+  if (!S.C) return warnBox();
+  return `<div data-live="warn"></div><section class="card doc"><div class="row end"><button class="btn" id="tcopy">글 전체 복사</button></div>${textHTML(S.T)}</section>`;
+}
+function bindText() {
+  const b = $('#tcopy'); if (!b) return;
+  b.onclick = async () => { try { await navigator.clipboard.writeText(textPlain(S.T)); toast('복사했습니다.'); } catch (e) { toast('복사가 막혀 있습니다. 글을 길게 눌러 선택해 주세요.'); } };
+}
+
+/* ===================== 탭: 출력 ===================== */
+function viewPrint() {
+  const o = S.print;
+  const C = S.C;
+  return `
+  <section class="card">
+    <h2>PDF 도안 만들기</h2>
+    <p class="desc">A4 세로 PDF로 표지(재료, 게이지, 완성 치수, 기호), 도식화, 서술형 도안, 무늬 차트, 조각별 차트를 묶습니다. 큰 차트는 여러 장으로 나누고 각 장에 코, 단 범위를 적습니다. 받은 PDF를 열어 인쇄하면 됩니다.</p>
+    <div class="grid">
+      <label class="fld"><span class="lb">차트 칸 크기</span><span class="iw"><select id="pcell">${[3, 4, 5, 6].map(v => `<option value="${v}" ${o.cell === v ? 'selected' : ''}>${v}mm</option>`).join('')}</select></span></label>
+    </div>
+    <div class="row wrap">
+      ${[['cover', '표지와 재료'], ['schem', '도식화'], ['text', '서술형 도안'], ['motifs', '무늬 차트'], ['charts', '조각 차트'], ['ratio', '게이지 비율 칸']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-pr="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
+    </div>
+    <div class="row"><button class="btn pri big" id="mkpdf" ${C ? '' : 'disabled'}>PDF 만들기</button><span id="pdfst" class="desc"></span></div>
+    ${S.dl === null ? '' : ''}
+    <div id="pdfprev" class="pdfprev"></div>
+  </section>
+  <section class="card">
+    <h2>백업과 옮기기</h2>
+    <p class="desc">모든 도안과 직접 만든 무늬를 JSON 파일 하나로 저장하거나 불러옵니다. 다른 기기로 옮길 때 씁니다.</p>
+    <div class="row wrap"><button class="btn" id="bk">JSON 백업 저장</button><label class="btn file">JSON 불러오기<input type="file" id="bkin" accept=".json,application/json"></label></div>
+  </section>`;
+}
+async function saveFile(filename, data) {
+  const dl = S.dl || (window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null);
+  if (!dl) { toast('이 화면에서는 파일 저장을 쓸 수 없습니다. Claude 앱이나 웹에서 열어 주세요.'); return false; }
+  try { await dl.save({ filename, data }); return true; }
+  catch (e) { if (e && e.code === 'declined') toast('저장을 취소했습니다.'); else toast('파일을 저장하지 못했습니다' + (e && e.code ? ` (${e.code})` : '')); return false; }
+}
+function bindPrint() {
+  $('#pcell').onchange = e => { S.print.cell = +e.target.value; LS.set('print', S.print); };
+  document.querySelectorAll('[data-pr]').forEach(el => el.onchange = () => { S.print[el.dataset.pr] = el.checked; LS.set('print', S.print); });
+  $('#mkpdf').onclick = makePDF;
+  $('#bk').onclick = () => {
+    const data = JSON.stringify({ app: 'kowadan', ver: 1, at: new Date().toISOString(), projects: S.projects, motifs: S.motifs, workers: S.workers, current: { id: S.id, P: S.P } }, null, 1);
+    saveFile(`코와단_백업_${new Date().toISOString().slice(0, 10)}.json`, data);
+  };
+  $('#bkin').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const j = JSON.parse(await f.text());
+      let n = 0, mN = 0;
+      for (const p of j.projects || []) { if (p && p.id && p.data) { const { id, ...rec } = p; await Store.saveProject(id, rec); n++; } }
+      for (const m of j.motifs || []) { if (m && m.id && m.rows) { await Store.saveMotif(m); mN++; } }
+      toast(`도안 ${n}개, 무늬 ${mN}개를 불러왔습니다.`); recompute();
+    } catch (err) { toast('파일을 읽지 못했습니다.'); }
+  };
+}
+
+/* ===================== PDF ===================== */
+const PG = { W: 840, H: 1188, M: 48 }; // 1단위 = 0.25mm
+async function makePDF() {
+  const C = S.C; if (!C) return;
+  const st = $('#pdfst'); const btn = $('#mkpdf');
+  if (!window.jspdf) { st.textContent = 'PDF 도구를 불러오는 중입니다. 잠시 후 다시 눌러 주세요.'; return; }
+  btn.disabled = true; st.textContent = '페이지를 그리는 중...';
+  try {
+    await document.fonts.load("400 16px 'Noto Sans KR'"); await document.fonts.load("700 16px 'Noto Sans KR'");
+    const pages = buildPages(C);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    const px = 1240 / PG.W; // 150dpi
+    for (let i = 0; i < pages.length; i++) {
+      st.textContent = `페이지 ${i + 1} / ${pages.length} 그리는 중...`;
+      await new Promise(r => setTimeout(r, 0));
+      const cv = document.createElement('canvas'); cv.width = 1240; cv.height = 1754;
+      const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+      const D = new CanvasDraw(ctx, 0, 0, px);
+      pages[i](D, ctx, px);
+      footer(D, i + 1, pages.length);
+      if (i) doc.addPage();
+      doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297);
+    }
+    st.textContent = 'PDF 저장 창을 엽니다...';
+    const blob = doc.output('blob');
+    const ok = await saveFile(`${(S.P.name || '도안').replace(/[\\/:*?"<>|]/g, '')}.pdf`, blob);
+    st.textContent = ok ? `PDF ${pages.length}쪽을 저장했습니다.` : '';
+  } catch (e) { console.error(e); st.textContent = 'PDF를 만들지 못했습니다: ' + e.message; }
+  btn.disabled = false;
+}
+function footer(D, n, N) {
+  D.line(PG.M, PG.H - 34, PG.W - PG.M, PG.H - 34, 0.8, GRID);
+  D.text(PG.M, PG.H - 22, `${S.P.name || ''}${S.worker ? ', 디자인 ' + S.worker : ''}`, 11, INK, 'left');
+  D.text(PG.W - PG.M, PG.H - 22, `${n} / ${N}`, 11, INK, 'right');
+}
+function wrapLines(ctx, px, text, size, weight, maxW) {
+  ctx.font = `${weight || 400} ${size * px}px 'Noto Sans KR', sans-serif`;
+  const words = String(text).split(/(\s+)/);
+  const lines = []; let cur = '';
+  const fits = s => ctx.measureText(s).width / px <= maxW;
+  words.forEach(w => {
+    if (fits(cur + w)) { cur += w; return; }
+    if (cur.trim()) { lines.push(cur.trimEnd()); cur = w.trimStart(); }
+    while (!fits(cur)) { let k = cur.length; while (k > 1 && !fits(cur.slice(0, k))) k--; lines.push(cur.slice(0, k)); cur = cur.slice(k); }
+  });
+  if (cur.trim()) lines.push(cur.trimEnd());
+  return lines;
+}
+function buildPages(C) {
+  const pages = [], o = S.print, P = S.P;
+  const X0 = PG.M, X1 = PG.W - PG.M, Y0 = PG.M, Y1 = PG.H - PG.M - 20;
+  // ---- 글 흐름 (표지 + 서술형)
+  if (o.cover || o.text) {
+    const blocks = [];
+    const f = C.finished;
+    if (o.cover) {
+      blocks.push({ t: 'title', s: P.name || '도안' });
+      blocks.push({ t: 'sub', s: `${C.isCard ? '가디건' : '풀오버'}, ${C.isV ? 'V넥' : '라운드넥'}, ${C.isDrop ? '드롭숄더' : '셋인 슬리브'}${P.size && P.size !== 'custom' ? `, 기준 사이즈 ${P.size}` : ''}` });
+      blocks.push({ t: 'sub', s: `디자인 ${S.worker || '-'}, ${new Date().toLocaleDateString('ko-KR')}` });
+      blocks.push({ t: 'table', rows: [['가슴둘레', fmt(f.chest) + 'cm', '총장', fmt(f.length) + 'cm'], ['밑단둘레', fmt(f.hem) + 'cm', '어깨너비', fmt(f.shoulder) + 'cm'], ['진동깊이', fmt(f.armDepth) + 'cm', '목너비', fmt(f.neckW) + 'cm'], ['소매길이', fmt(f.sleeveLen) + 'cm', '소매통', fmt(f.upper) + 'cm']] });
+      blocks.push({ t: 'legend' });
+    }
+    if (o.text) S.T.forEach(b => { if (o.cover && (b.t === 'h1' || b.sec === 'fin')) return; blocks.push(b); });
+    let page = [], y = Y0;
+    const flush = () => { const items = page; pages.push((D, ctx, px) => items.forEach(fn => fn(D, ctx, px))); page = []; y = Y0; };
+    const tmp = document.createElement('canvas').getContext('2d'); const px = 1240 / PG.W;
+    blocks.forEach(b => {
+      if (b.t === 'table') {
+        const h = b.rows.length * 34 + 10;
+        if (y + h > Y1) flush();
+        const y0 = y;
+        page.push(D => { b.rows.forEach((r, i) => { const yy = y0 + i * 34; D.fillRect(X0, yy, X1 - X0, 32, i % 2 ? '#FBF7F2' : '#F4ECE3'); const cw = (X1 - X0) / 4; r.forEach((c, j) => D.text(X0 + cw * j + 12, yy + 16, c, 13, INK, 'left', j % 2 ? 400 : 700)); }); });
+        y += h + 10; return;
+      }
+      if (b.t === 'legend') {
+        const syms = usedSymbols(C.pieces);
+        const cs = 22, colW = (X1 - X0) / 2;
+        const rowsN = Math.ceil(syms.length / 2);
+        const h = 40 + rowsN * 30;
+        if (y + h > Y1) flush();
+        const y0 = y;
+        page.push(D => {
+          D.text(X0, y0 + 14, '기호', 17, INK, 'left', 700);
+          syms.forEach((s, i) => {
+            const cx = X0 + (i % 2) * colW, cy = y0 + 36 + Math.floor(i / 2) * 30;
+            const w = parseTok(s) ? parseTok(s).w : 1;
+            D.rect(cx, cy, w * cs, cs, PAPER, GRID, 0.8);
+            if (parseTok(s)) drawCross(D, s, cx, cy, cs, cs, PAPER); else drawSym(D, s, cx, cy, cs, cs, { showKnit: true });
+            D.text(cx + w * cs + 10, cy + cs / 2, symName(s), 12, INK, 'left');
+          });
+        });
+        y += h + 10; return;
+      }
+      const sty = { title: [30, 700, 14], sub: [14, 400, 6], h1: [24, 700, 14], h2: [18, 700, 10], h3: [14, 700, 6], p: [13, 400, 6], li: [13, 400, 4], note: [12, 400, 4] }[b.t];
+      const [size, wt, gap] = sty;
+      const indent = b.t === 'li' ? 18 : 0;
+      const lines = wrapLines(tmp, px, b.s, size, wt, X1 - X0 - indent);
+      const lh = size * 1.55;
+      if (b.t === 'h2' || b.t === 'h3') { if (y + lh * 3 > Y1) flush(); y += gap; }
+      if (b.t === 'h2') { const yy = y; page.push(D => D.line(X0, yy - 4, X1, yy - 4, 1, RIBLINE)); y += 6; }
+      lines.forEach((ln, i) => {
+        if (y + lh > Y1) flush();
+        const yy = y;
+        page.push(D => { if (b.t === 'li' && i === 0) D.circle(X0 + 6, yy + lh / 2, 2.4, INK); D.text(X0 + indent, yy + lh / 2, ln, size, INK, 'left', wt); });
+        y += lh;
+      });
+      y += b.t === 'h2' ? 4 : gap;
+    });
+    if (page.length) flush();
+  }
+  // ---- 도식화
+  if (o.schem) {
+    const list = schemPieces(C);
+    pages.push(D => {
+      D.text(X0, Y0 + 10, '도식화', 22, INK, 'left', 700);
+      const fs = 12, cols = 2;
+      const cellW = (X1 - X0) / cols, cellH = (Y1 - Y0 - 40) / Math.ceil(list.length / cols);
+      const maxWcm = Math.max(...list.map(pc => pc.W / C.gs)), maxHcm = Math.max(...list.map(pc => pc.total / C.gr));
+      const scale = Math.min((cellW - fs * 14) / maxWcm, (cellH - fs * 9) / maxHcm);
+      list.forEach((pc, i) => {
+        const cx = X0 + (i % cols) * cellW, cy = Y0 + 40 + Math.floor(i / cols) * cellH;
+        drawSchematicPiece(D, C, pc, cx + fs * 8, cy + fs * 6, scale, fs);
+      });
+    });
+  }
+  // ---- 무늬 차트
+  if (o.motifs) {
+    const used = [];
+    C.pieces.forEach(pc => pc.placements.slice().reverse().forEach(p => { if (p.kind === 'motif' && !used.find(m => m.id === p.motif.id)) used.push(p.motif); }));
+    if (used.length) {
+      let items = [], x = X0, y = Y0 + 40, rowH = 0;
+      const pagesM = [];
+      const pushPage = () => { const it = items; pagesM.push(it); items = []; x = X0; y = Y0 + 40; rowH = 0; };
+      used.forEach(m => {
+        const mp = motifPiece(m);
+        const cs = 20;
+        const G = chartGeom(mp, { cw: cs, ch: cs, title: `${m._label || ''} ${m.name}` });
+        const w = Math.max(G.width, 200), h = G.height;
+        if (x + w > X1) { x = X0; y += rowH + 20; rowH = 0; }
+        if (y + h > Y1) pushPage();
+        const ox = x, oy = y;
+        items.push((D) => { const sub = new CanvasDraw(D.c, D.ox + ox * D.s, D.oy + oy * D.s, D.s); drawChart(sub, mp, { cw: cs, ch: cs, showKnit: true, title: `${m._label || ''} ${m.name}` }); });
+        x += w + 24; rowH = Math.max(rowH, h);
+      });
+      if (items.length) pushPage();
+      pagesM.forEach((it, i) => pages.push(D => { D.text(X0, Y0 + 10, i ? '무늬 차트 (이어서)' : '무늬 차트', 22, INK, 'left', 700); it.forEach(fn => fn(D)); }));
+    }
+  }
+  // ---- 조각 차트 (분할)
+  if (o.charts) {
+    const cw = o.cell * 4, ratio = o.ratio;
+    C.pieces.forEach(pc => {
+      const ch = ratio ? cw * C.gs / C.gr : cw;
+      const G0 = chartGeom(pc, { cw, ch, title: 'x' });
+      const availW = X1 - X0 - G0.mL - G0.mR, availH = Y1 - Y0 - G0.mT - G0.mB - 10;
+      const nc0 = Math.max(1, Math.floor(availW / cw)), nr0 = Math.max(1, Math.floor(availH / ch));
+      const nc = Math.ceil(pc.W / Math.ceil(pc.W / nc0)), nr = Math.ceil(pc.total / Math.ceil(pc.total / nr0));
+      const tiles = [];
+      for (let r0 = 1; r0 <= pc.total; r0 += nr) {
+        for (let c1 = pc.W - 1; c1 >= 0; c1 -= nc) {
+          const c0 = Math.max(0, c1 - nc + 1), r1 = Math.min(pc.total, r0 + nr - 1);
+          let any = false;
+          for (let r = r0; r <= r1 && !any; r++) for (let c = c0; c <= c1; c++) if (pc.codes[r] && pc.codes[r][c] != null) { any = true; break; }
+          if (any) tiles.push({ r0, r1, c0, c1 });
+        }
+      }
+      tiles.forEach((t, i) => {
+        const title = `${pc.name} 차트 ${i + 1}/${tiles.length}: ${pc.W - t.c1}~${pc.W - t.c0}코, ${t.r0}~${t.r1}단`;
+        pages.push(D => { const sub = new CanvasDraw(D.c, D.ox + X0 * D.s, D.oy + Y0 * D.s, D.s); drawChart(sub, pc, { cw, ch, r0: t.r0, r1: t.r1, c0: t.c0, c1: t.c1, showKnit: S.chart.showKnit, tint: S.chart.tint, center: S.chart.center, title }); });
+      });
+    });
+  }
+  return pages;
+}
+
+/* ===================== 시작 ===================== */
+S.chart = { ...S.chart, ...LS.get('chart', {}) };
+S.print = { ...S.print, ...LS.get('print', {}) };
+window.addEventListener('DOMContentLoaded', () => Store.init());
+
+</script>
+</body>
+</html>
