@@ -22,7 +22,7 @@ async def main():
                         if bh > 32 or bw < bh: bad.append(f'{name} 차트 배지 여러 줄: {txt} {bw:.0f}x{bh:.0f}')
                 over = await pg.evaluate("[...document.querySelectorAll('main *')].filter(e=>{const r=e.getBoundingClientRect(); if(r.right<=innerWidth+1) return false; let p=e.parentElement; while(p&&p!==document.body){const o=getComputedStyle(p).overflowX; if(o==='auto'||o==='scroll'||o==='hidden') return false; p=p.parentElement;} return true;}).slice(0,3).map(e=>e.tagName+'.'+e.className)")
                 if over: bad.append(f'{name} {t} 가로 넘침: {over}')
-            mk = await pg.evaluate("(()=>{const r=document.querySelector('.bmark').getBoundingClientRect();return [r.width,r.height]})()")
+            mk = await pg.evaluate("(()=>{const e=document.querySelector('.bmark'); if(!e) return null; const r=e.getBoundingClientRect();return [r.width,r.height]})()")
             if mk != [40, 40]: bad.append(f'{name} 머리 마크 크기 {mk}')
             if errs: bad.append(f'{name} 오류 {errs}')
             await ctx.close()
