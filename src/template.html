@@ -3,26 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#FBF9F6">
-<meta name="description" content="치수, 여유분, 게이지로 대바늘 차트 도안과 서술형 도안을 만드는 앱">
+<meta name="theme-color" content="#1F2335">
+<meta name="description" content="달의정원 손뜨개 대바늘 도안 설계. 치수, 여유분, 게이지로 차트 도안과 서술형 도안을 만듭니다">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="코와단">
-<title>코와단 대바늘 도안 설계</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="icon" id="favicon" href="data:,">
+<title>코와단, 달의정원 손뜨개 도안 설계</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/nanum-pen-script@5.3.0/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
-  --bg:#FBF9F6; --card:#FFFFFF; --surface-sub:#F3EFEA;
-  --ink:#1C1917; --ink2:#68625D; --line:#E7E2DA; --line2:#D5CEC4;
-  --rose:#8C3B32; --rose2:#F9EFEA; --accent:#3B5944; --accent2:#EAF0EB;
-  --warn:#FDF4EC; --warnb:#E2B48A;
-  --shadow:0 2px 10px rgba(28,25,23,0.04);
+  /* 달의정원: 밤하늘 남색, 달빛 크림, 금색 실, 손글씨 세 색 */
+  --night:#1F2335; --night2:#2D3352; --moon:#F7F2E6; --gold:#B8862F;
+  --bg:#F7F2E6; --card:#FFFDF8; --surface-sub:#F1EADB;
+  --ink:#1F1D1A; --ink2:#5C5346; --line:#E9E0CE; --line2:#D9CDB5;
+  --rose:#8A6320; --rose2:#F5EAD2; --accent:#5E57A6; --accent2:#ECEAF7;
+  --warn:#FBF1E2; --warnb:#E0B877;
+  --shadow:0 2px 10px rgba(31,35,53,0.05);
   --hdr-h:60px; --tabs-h:50px;
   --sans:'Pretendard Variable','Pretendard','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
-  --serif:'Noto Serif KR','Nanum Myeongjo','AppleMyungjo',var(--sans);
+  --hand:'Nanum Pen Script',var(--sans);
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-text-size-adjust:100%;letter-spacing:-0.005em;word-break:keep-all;overflow-wrap:anywhere}
@@ -30,23 +32,29 @@ button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
 input[type=number],.mtable,.tbl,.kv,.prog,.rjump,.aformula,svg text{font-variant-numeric:tabular-nums}
 
 /* 헤더 */
-.top{position:sticky;top:0;z-index:30;height:var(--hdr-h);background:rgba(251,249,246,0.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:0 20px;display:flex;align-items:center;gap:14px}
-.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
-.logo{font-family:var(--serif);font-weight:700;font-size:22px;letter-spacing:-0.02em;color:var(--ink)}
-.sub{font-size:13px;color:var(--ink2);letter-spacing:-0.01em}
+.top{position:sticky;top:0;z-index:30;height:var(--hdr-h);background:var(--night);color:var(--moon);padding:0 20px;display:flex;align-items:center;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
+.badge{flex:0 0 auto;display:flex;width:40px;height:40px}
+.badge svg{width:40px;height:40px;display:block}
+.bname{display:flex;flex-direction:column;line-height:1.1;min-width:0}
+.logo{font-weight:800;font-size:20px;letter-spacing:-0.03em;color:var(--moon)}
+.sub{font-family:var(--hand);font-size:19px;letter-spacing:0;white-space:nowrap}
+.sub .h1{color:#B9B1F5}.sub .h2{color:#EDBB55}.sub .h3{color:#62CDB6}
+.top .btn.pri{background:var(--gold);border-color:var(--gold);color:var(--night);font-weight:700}
+.top .btn.pri.dirty{box-shadow:0 0 0 3px rgba(237,187,85,.45)}
 .hdr{display:flex;gap:8px;align-items:center}
-.pname,.hdr select{background:#fff;border:1px solid var(--line2);border-radius:10px;padding:7px 11px;color:var(--ink)}
+.pname,.hdr select{background:var(--card);border:1px solid transparent;border-radius:10px;padding:7px 11px;color:var(--ink)}
 .pname{width:220px;min-width:0}
-.pname:focus,.hdr select:focus{outline:0;border-color:var(--rose);box-shadow:0 0 0 3px var(--rose2)}
+.pname:focus,.hdr select:focus{outline:0;border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,134,47,.45)}
 
 /* 탭 */
-.tabs{position:sticky;top:var(--hdr-h);z-index:29;display:flex;align-items:center;gap:2px;overflow-x:auto;background:rgba(251,249,246,0.94);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:0 14px;height:var(--tabs-h);scrollbar-width:none}
+.tabs{position:sticky;top:var(--hdr-h);z-index:29;display:flex;align-items:center;gap:2px;overflow-x:auto;background:rgba(247,242,230,0.95);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:0 14px;height:var(--tabs-h);scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tgl{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--ink2);letter-spacing:.04em;padding:0 6px 0 4px}
 .tdiv{flex:0 0 auto;width:1px;height:22px;background:var(--line2);margin:0 10px}
 .tabs button{flex:0 0 auto;display:flex;align-items:center;gap:6px;border:0;background:none;padding:7px 11px;font-weight:500;color:var(--ink2);border-radius:9px;cursor:pointer;position:relative}
 .tabs button:hover{background:var(--surface-sub);color:var(--ink)}
-.tabs button.on{color:var(--rose);font-weight:700;background:var(--rose2)}
+.tabs button.on{color:var(--night);font-weight:700;background:var(--rose2);box-shadow:inset 0 -2px 0 var(--gold)}
 .ic{flex:0 0 auto}
 
 main{max-width:1240px;margin:0 auto;padding:18px 16px 90px}
@@ -62,9 +70,10 @@ main{max-width:1240px;margin:0 auto;padding:18px 16px 90px}
 .btn{border:1px solid var(--line2);background:#fff;border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:500;white-space:nowrap;transition:border-color .15s,background .15s}
 .btn:hover{border-color:var(--rose)}
 .btn.sm{padding:6px 11px;font-size:13px}
-.btn.pri{background:var(--rose);border-color:var(--rose);color:#fff}
+.btn.pri{background:var(--night);border-color:var(--night);color:var(--moon)}
+.btn.pri:hover{background:var(--night2);border-color:var(--gold)}
 .btn.pri:hover{background:#7A3229}
-.btn.pri.dirty{box-shadow:0 0 0 3px rgba(229,152,155,.45)}
+.btn.pri.dirty{box-shadow:0 0 0 3px rgba(184,134,47,.4)}
 .btn.ghost{background:none}
 .btn.big{padding:11px 22px;font-size:16px}
 .btn[disabled]{opacity:.45;cursor:default}
@@ -74,7 +83,7 @@ main{max-width:1240px;margin:0 auto;padding:18px 16px 90px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{border:1px solid var(--line2);border-radius:20px;padding:5px 13px;cursor:pointer;background:#fff;font-weight:500;user-select:none;font-variant-numeric:tabular-nums}
 .chip:hover{border-color:var(--rose)}
-.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip.on{background:var(--night);border-color:var(--night);color:var(--moon)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px 14px}
 .fld{display:flex;flex-direction:column;gap:4px;margin:4px 0}
 .fld.wide{grid-column:1/-1}
@@ -89,8 +98,8 @@ main{max-width:1240px;margin:0 auto;padding:18px 16px 90px}
 .seg button:hover{color:var(--ink)}
 .seg button.on{background:#fff;color:var(--rose);font-weight:700;box-shadow:0 1px 3px rgba(28,25,23,.1)}
 .seg small{font-weight:500;color:inherit;opacity:.8;font-size:12px}
-.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-right:10px;font-size:14px}
-.chk input{width:18px;height:18px;accent-color:var(--rose)}
+.chk{display:inline-flex;align-items:flex-start;gap:6px;cursor:pointer;margin-right:10px;font-size:14px}
+.chk input{width:18px;height:18px;margin-top:3px;flex:0 0 auto;accent-color:var(--rose)}
 
 /* 치수 */
 .pgroups{display:flex;flex-direction:column;gap:6px;margin:4px 0 6px}
@@ -215,8 +224,8 @@ main{max-width:1240px;margin:0 auto;padding:18px 16px 90px}
 .grade tr.gh td{background:var(--surface-sub);font-weight:700;color:var(--ink)}
 
 /* 서술형 */
-.doc h1{font-family:var(--serif);font-size:26px;letter-spacing:-0.02em;margin:4px 0 8px}
-.doc h2{font-size:18px;border-top:2px solid var(--rose);padding-top:10px;margin:22px 0 8px}
+.doc h1{font-size:26px;font-weight:800;letter-spacing:-0.03em;margin:4px 0 8px}
+.doc h2{font-size:18px;border-top:2px solid var(--gold);padding-top:10px;margin:22px 0 8px}
 .doc h3{font-size:15px}
 .doc p,.doc li{font-size:15px}
 .doc ul{padding-left:20px}
@@ -226,10 +235,15 @@ main{max-width:1240px;margin:0 auto;padding:18px 16px 90px}
 .tick::before{content:'';position:absolute;left:6px;top:.45em;width:14px;height:14px;border:1.5px solid var(--line2);border-radius:4px;background:#fff}
 .doc ul{list-style:none}
 .tick.done{text-decoration:line-through;color:var(--ink2)}
-.tick.done::before{background:var(--accent);border-color:var(--accent)}
+.tick.done::before{background:var(--night);border-color:var(--night)}
 .tick.done::after{content:'';position:absolute;left:10.5px;top:calc(.45em + 2px);width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
 
-.welcome{border-color:var(--rose);background:#FFFCFA}
+.welcome{border-color:var(--gold);background:var(--card)}
+.welcome .whead{display:flex;align-items:center;gap:14px}
+.welcome .whead svg{width:64px;height:64px;flex:0 0 auto}
+.welcome .hand{font-family:var(--hand);font-size:24px;line-height:1.1}
+.welcome .hand .h1{color:var(--accent)}.welcome .hand .h2{color:#C98F1E}.welcome .hand .h3{color:#2C9A86}
+.welcome .en{font-family:var(--hand);font-size:18px;color:var(--ink)}
 .welcome ol{margin:4px 0 0;padding-left:20px}
 .welcome li{margin:4px 0}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(30px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:24px;opacity:0;transition:.25s;pointer-events:none;z-index:60;font-size:14px;max-width:90vw}
@@ -242,7 +256,7 @@ main{max-width:1240px;margin:0 auto;padding:18px 16px 90px}
   :root{--hdr-h:auto}
   body{font-size:14px}
   .top{position:static;height:auto;flex-wrap:wrap;padding:10px 12px;gap:8px}
-  .sub{display:none}
+  .sub{font-size:18px}
   .pname{width:130px}
   .tabs{top:0;padding:0 6px}
   .tgl{display:none}

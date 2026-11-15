@@ -173,7 +173,7 @@ const TAB_GROUPS = [['설계', [['proj', '프로젝트'], ['size', '치수'], ['
 function renderAll() {
   $('#app').innerHTML = `
   <header class="top">
-    <div class="brand"><span class="logo">코와단</span><span class="sub">대바늘 도안 설계</span></div>
+    <div class="brand"><span class="badge" aria-hidden="true">${moonSVG(40, { disc: BRAND.moon, zoom: 1.32 })}</span><span class="bname"><span class="logo">코와단</span><span class="sub"><span class="h1">달의</span> <span class="h2">정원</span> <span class="h3">손뜨개</span></span></span></div>
     <div class="hdr" id="hdr"></div>
   </header>
   <nav class="tabs" id="tabs">${TAB_GROUPS.map(([g, tabs], gi) => `${gi ? '<span class="tdiv" aria-hidden="true"></span>' : ''}<span class="tgl">${g}</span>${tabs.map(([k, n]) => `<button data-tab="${k}">${icon(k)}<span>${n}</span></button>`).join('')}`).join('')}</nav>
@@ -182,6 +182,7 @@ function renderAll() {
   <div id="modal" class="modal"></div>`;
   $('#tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) { S.tab = b.dataset.tab; LS.set('tab', S.tab); renderTab(); window.scrollTo(0, 0); } });
   S.tab = LS.get('tab', 'size');
+  const fav = document.getElementById('favicon'); if (fav) fav.href = 'data:image/svg+xml,' + encodeURIComponent(moonSVG(28, { disc: BRAND.moon, zoom: 1.32 }));
   renderHeader();
   recompute();
 }
@@ -373,7 +374,7 @@ const BODY_ROWS = [
 ];
 function welcomeHTML() {
   if (LS.get('welcomed', false)) return '';
-  return `<section class="card welcome"><div class="hrow"><h2>처음 오셨나요?</h2><button class="btn" id="wclose">닫기</button></div>
+  return `<section class="card welcome"><div class="hrow"><div class="whead">${moonSVG(64, { disc: BRAND.moon, ring: '#E3D3AE' })}<div><div class="hand"><span class="h1">달의</span> <span class="h2">정원</span> <span class="h3">손뜨개</span></div><div class="en">Luna's Garden</div><h2 style="margin:6px 0 0">도안 설계를 시작해 볼까요?</h2></div></div><button class="btn" id="wclose">닫기</button></div>
   <ol>
     <li><b>치수</b>: 사이즈 버튼을 누르거나 신체 치수를 넣고, 핏을 고른 뒤 게이지를 넣습니다.</li>
     <li><b>디자인</b>: 풀오버나 가디건, 목선, 소매 모양, 꽈배기 무늬 배치를 고릅니다.</li>
@@ -1093,6 +1094,11 @@ function viewPrint() {
       ${[['cover', '표지와 재료'], ['schem', '도식화'], ['grade', '사이즈 그레이딩 표'], ['text', '서술형 도안'], ['motifs', '무늬 차트'], ['charts', '조각 차트'], ['ratio', '게이지 비율 칸']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-pr="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
     </div>
     ${gradeSizes().length >= 2 ? `<div class="row wrap"><label class="chk"><input type="checkbox" id="pgraded" ${gradedOn() ? 'checked' : ''}><span>표지와 서술형 도안에 사이즈 병기 (${esc(gradeSizes().map(presetLabel).join(', '))})</span></label></div>` : ''}
+    <div class="grid">
+      <label class="fld"><span class="lb">표지 브랜드</span><span class="iw"><input class="inp0" id="bko" value="${esc(S.brand.ko)}" placeholder="예: 달의정원 손뜨개"></span></label>
+      <label class="fld"><span class="lb">영문 이름</span><span class="iw"><input class="inp0" id="ben" value="${esc(S.brand.en)}" placeholder="예: Luna's Garden"></span></label>
+    </div>
+    <div class="row wrap"><label class="chk"><input type="checkbox" id="bon" ${S.brand.on ? 'checked' : ''}><span>표지와 아래쪽 줄에 브랜드와 달 마크 넣기</span></label></div>
     <div class="row wrap"><label class="chk"><input type="checkbox" data-pr="vec" ${o.vec ? 'checked' : ''}><span>가벼운 PDF (선과 글자를 그대로 저장해 용량이 작고 인쇄가 선명함. 처음 한 번 글꼴 약 5MB를 받음)</span></label></div>
     <div class="row wrap"><button class="btn pri big" id="mkpdf" ${C ? '' : 'disabled'}>PDF 저장</button>${IN_CLAUDE ? '' : `<button class="btn big" id="prpdf" ${C ? '' : 'disabled'}>PDF 열어서 인쇄</button>`}<span id="pdfst" class="desc"></span></div>
   </section>
@@ -1131,6 +1137,8 @@ function bindPrint() {
   $('#pcell').onchange = e => { S.print.cell = +e.target.value; LS.set('print', S.print); };
   document.querySelectorAll('[data-pr]').forEach(el => el.onchange = () => { S.print[el.dataset.pr] = el.checked; LS.set('print', S.print); });
   const pg = $('#pgraded'); if (pg) pg.onchange = () => { S.P.textGraded = pg.checked; touchQuiet(); };
+  const bsave = () => { S.brand = { ko: $('#bko').value.trim(), en: $('#ben').value.trim(), on: $('#bon').checked }; LS.set('brand', S.brand); };
+  ['#bko', '#ben'].forEach(k => $(k).oninput = bsave); $('#bon').onchange = bsave;
   $('#mkpdf').onclick = () => makePDF(false);
   const pr = $('#prpdf'); if (pr) pr.onclick = () => makePDF(true);
   $('#exone').onclick = () => {
@@ -1293,7 +1301,8 @@ async function makePDF(openIt) {
 }
 function footer(D, n, N) {
   D.line(PG.M, PG.H - 34, PG.W - PG.M, PG.H - 34, 0.8, GRID);
-  D.text(PG.M, PG.H - 22, `${S.P.name || ''}${S.worker ? ', 디자인 ' + S.worker : ''}`, 11, INK, 'left');
+  const br = S.brand && S.brand.on ? (S.brand.ko || S.brand.en) : '';
+  D.text(PG.M, PG.H - 22, `${br ? br + ' | ' : ''}${S.P.name || ''}${S.worker ? ', 디자인 ' + S.worker : ''}`, 11, INK, 'left');
   D.text(PG.W - PG.M, PG.H - 22, `${n} / ${N}`, 11, INK, 'right');
 }
 function wrapLines(ctx, px, text, size, weight, maxW) {
@@ -1318,6 +1327,7 @@ function buildPages(C) {
     const fv = k => G ? mergeVals(G.list.map(x => fmt(x.C.finished[k])), G.list.map(x => x.label)) : fmt(C.finished[k]);
     if (o.cover) {
       const sizeTxt = G ? `, 사이즈 ${G.list[0].label}(${G.list.slice(1).map(x => x.label).join(', ')})` : P.size && P.size !== 'custom' ? `, 기준 사이즈 ${presetLabel(P.size)}` : '';
+      if (S.brand.on && (S.brand.ko || S.brand.en)) blocks.push({ t: 'brand' });
       blocks.push({ t: 'title', s: P.name || '도안' });
       blocks.push({ t: 'sub', s: `${C.isCard ? '가디건' : '풀오버'}, ${C.isV ? 'V넥' : '라운드넥'}, ${C.isDrop ? '드롭숄더' : '셋인 슬리브'}${sizeTxt}${FITS[P.fit] ? `, ${FITS[P.fit].name}` : ''}` });
       blocks.push({ t: 'sub', s: `디자인 ${S.worker || '-'}, ${new Date().toLocaleDateString('ko-KR')}` });
@@ -1334,8 +1344,18 @@ function buildPages(C) {
         const h = b.rows.length * 34 + 10;
         if (y + h > Y1) flush();
         const y0 = y;
-        page.push(D => { b.rows.forEach((r, i) => { const yy = y0 + i * 34; D.fillRect(X0, yy, X1 - X0, 32, i % 2 ? '#FBF9F6' : '#F3EFEA'); const cw = (X1 - X0) / (r.length === 2 ? 5 : 4); r.forEach((c, j) => D.text(X0 + cw * j + 12, yy + 16, c, 13, INK, 'left', j % 2 ? 400 : 700)); }); });
+        page.push(D => { b.rows.forEach((r, i) => { const yy = y0 + i * 34; D.fillRect(X0, yy, X1 - X0, 32, i % 2 ? '#FBF7EE' : '#F3ECDD'); const cw = (X1 - X0) / (r.length === 2 ? 5 : 4); r.forEach((c, j) => D.text(X0 + cw * j + 12, yy + 16, c, 13, INK, 'left', j % 2 ? 400 : 700)); }); });
         y += h + 10; return;
+      }
+      if (b.t === 'brand') {
+        const y0 = y, R = 34;
+        page.push(D => {
+          moonMark(D, X0 + R, y0 + R, R, { disc: BRAND.moon });
+          if (S.brand.ko) D.text(X0 + R * 2 + 16, y0 + R - (S.brand.en ? 10 : 0), S.brand.ko, 18, BRAND.night, 'left', 700);
+          if (S.brand.en) D.text(X0 + R * 2 + 16, y0 + R + (S.brand.ko ? 14 : 0), S.brand.en, 13, INK, 'left', 400);
+          D.line(X0, y0 + R * 2 + 14, X1, y0 + R * 2 + 14, 1.2, BRAND.gold);
+        });
+        y += R * 2 + 30; return;
       }
       if (b.t === 'legend') {
         const syms = usedSymbols(C.pieces);
@@ -1465,4 +1485,5 @@ function buildPages(C) {
 /* ===================== 시작 ===================== */
 S.chart = { ...S.chart, ...LS.get('chart', {}) };
 S.print = { ...S.print, ...LS.get('print', {}) };
+S.brand = { ko: '달의정원 손뜨개', en: "Luna's Garden", on: true, ...LS.get('brand', {}) };
 window.addEventListener('DOMContentLoaded', () => Store.init());

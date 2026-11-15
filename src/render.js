@@ -1,8 +1,50 @@
 'use strict';
 const CANVAS_FONT = "'Pretendard Variable', Pretendard, 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif";
+
+/* ===================== 달의정원 마크 ===================== */
+// 실 감은 초승달과 바늘 두 개. SVG, 캔버스, PDF 그리기 모두 같은 함수로 그림
+const BRAND = { night: '#1F2335', moon: '#F7F2E6', gold: '#B8862F', knob: '#D9822B', lav: '#5E57A6', mus: '#C98F1E', teal: '#2C9A86' };
+function moonMark(D, cx, cy, R, opt = {}) {
+  const gold = opt.color || BRAND.gold, small = opt.small ?? R < 30, sw = opt.sw || (small ? Math.max(1.3, R * 0.09) : R * 0.045);
+  if (opt.disc) D.circle(cx, cy, R, opt.disc, opt.ring || null, opt.ring ? sw * 0.8 : 0);
+  if (opt.zoom) { R *= opt.zoom; cx += R * 0.04; }
+  const a = { x: cx - 0.06 * R, y: cy + 0.04 * R, r: 0.6 * R }, b = { x: a.x + 0.34 * R, y: a.y - 0.3 * R, r: 0.5 * R };
+  const inA = (x, y) => (x - a.x) ** 2 + (y - a.y) ** 2 <= a.r * a.r, outB = (x, y) => (x - b.x) ** 2 + (y - b.y) ** 2 >= b.r * b.r;
+  const inside = (x, y) => inA(x, y) && outB(x, y);
+  // 두 원의 교점
+  const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), l = (a.r * a.r - b.r * b.r + d * d) / (2 * d), h = Math.sqrt(a.r * a.r - l * l);
+  const mx = a.x + dx * l / d, my = a.y + dy * l / d;
+  const p1 = [mx + h * dy / d, my - h * dx / d], p2 = [mx - h * dy / d, my + h * dx / d];
+  const ang = (c, p) => Math.atan2(p[1] - c.y, p[0] - c.x);
+  const arc = (c, t0, t1, n) => Array.from({ length: n + 1 }, (_, i) => { const t = t0 + (t1 - t0) * i / n; return [c.x + c.r * Math.cos(t), c.y + c.r * Math.sin(t)]; });
+  let a0 = ang(a, p1), a1 = ang(a, p2); if (a1 <= a0) a1 += 2 * Math.PI;
+  let outer = arc(a, a0, a1, 40); if (inside(...arc(a, (a0 + a1) / 2, (a0 + a1) / 2, 0)[0]) === false) { a1 -= 2 * Math.PI; outer = arc(a, a0, a1, 40); }
+  let b0 = ang(b, p2), b1 = ang(b, p1);
+  let inner = arc(b, b0, b1, 30); const midB = arc(b, (b0 + b1) / 2, (b0 + b1) / 2, 0)[0]; if (!inA(...midB)) { b1 += (b1 > b0 ? -2 : 2) * Math.PI; inner = arc(b, b0, b1, 30); }
+  if (opt.fill) D.poly(outer.concat(inner), opt.fill, null, 0);
+  // 실 줄무늬: 오른쪽 아래를 중심으로 한 동심원 조각 + 위쪽 사선 줄
+  const strokeIn = pts => { let seg = []; pts.forEach(q => { if (inside(q[0], q[1])) seg.push(q); else { if (seg.length > 1) D.poly(seg, null, gold, sw * 0.8, false); seg = []; } }); if (seg.length > 1) D.poly(seg, null, gold, sw * 0.8, false); };
+  const o = { x: a.x + 0.42 * R, y: a.y + 0.62 * R };
+  for (let k = 1; k <= (small ? 3 : 5); k++) { const rr = (small ? 0.28 : 0.18) * R * k; strokeIn(Array.from({ length: 61 }, (_, i) => { const t = Math.PI + (Math.PI / 2) * i / 60; return [o.x + rr * Math.cos(t), o.y + rr * Math.sin(t)]; })); }
+  const q = { x: a.x + 0.9 * R, y: a.y - 0.9 * R };
+  for (let k = 0; k < (small ? 2 : 4); k++) { const rr = 0.95 * R + (small ? 0.24 : 0.15) * R * k; strokeIn(Array.from({ length: 61 }, (_, i) => { const t = Math.PI / 2 + (Math.PI / 2) * i / 60; return [q.x + rr * Math.cos(t), q.y + rr * Math.sin(t)]; })); }
+  D.poly(outer.concat(inner), null, gold, sw, true);
+  // 바늘 두 개
+  if (!opt.noNeedles) {
+    [[0.02, 0.6, 0.74], [0.26, 0.73, 0.6]].forEach(([oy, ey, ex], i) => {
+      const k = small ? 0.8 : 1, x0 = cx - (small ? 0.64 : 0.8) * R, y0 = cy + oy * R, x1 = cx + ex * k * R, y1 = cy + ey * k * R;
+      // 초승달 안쪽은 실에 가려지도록 바깥 부분만
+      const n = 60, pts = Array.from({ length: n + 1 }, (_, j) => [x0 + (x1 - x0) * j / n, y0 + (y1 - y0) * j / n]);
+      let seg = []; pts.forEach(pp => { if (!inside(pp[0], pp[1])) seg.push(pp); else { if (seg.length > 1) D.poly(seg, null, gold, sw * 0.8, false); seg = []; } }); if (seg.length > 1) D.poly(seg, null, gold, sw * 0.8, false);
+      D.circle(x0, y0, small ? R * 0.11 : R * 0.075, opt.knob || BRAND.knob);
+    });
+  }
+  if (D.flush) D.flush();
+}
+function moonSVG(size, opt = {}) { const D = new SvgDraw(size, size); moonMark(D, size / 2, size / 2, size / 2 - (opt.ring ? 1 : 0), opt); return D.toString(); }
 /* ===================== 그리기 백엔드 ===================== */
-const INK = '#1C1917', GRID = '#D6CFC7', GRID10 = '#78716C', PAPER = '#FFFFFF', TINT = '#F5E6C8', CENTER = '#E5989B', RIBLINE = '#8C3B32';
-const HL_FILL = 'rgba(140,59,50,0.18)', DIM_FILL = 'rgba(251,249,246,0.66)';
+const INK = '#1C1917', GRID = '#D6CFC7', GRID10 = '#78716C', PAPER = '#FFFFFF', TINT = '#F5E6C8', CENTER = '#8E86D0', RIBLINE = '#A97A28';
+const HL_FILL = 'rgba(94,87,166,0.2)', DIM_FILL = 'rgba(247,242,230,0.66)';
 class SvgDraw {
   constructor(w, h) { this.w = w; this.h = h; this.out = []; this.lb = new Map(); this.fb = new Map(); }
   _k(m, k) { let b = m.get(k); if (!b) { b = []; m.set(k, b); } return b; }
@@ -107,7 +149,7 @@ function drawChart(D, pc, opt, G) {
     if (!ex(r, c)) continue;
     const t = tintAt(r, c);
     if (t && codes[r][c] !== 'bo') D.fillRect(X(c), Y(r), cw, ch, t);
-    if (opt.center && centerOdd && c === cc) D.fillRect(X(c), Y(r), cw, ch, '#F7DEDF');
+    if (opt.center && centerOdd && c === cc) D.fillRect(X(c), Y(r), cw, ch, '#ECE9F7');
   }
   // 2. 가는 격자
   const gsw = Math.max(0.5, cw * 0.045);

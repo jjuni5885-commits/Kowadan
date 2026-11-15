@@ -5,10 +5,11 @@ from playwright.async_api import async_playwright
 ROOT = Path(__file__).resolve().parent.parent; PRE = Path('/tmp/node_modules/pretendard/dist')
 async def font_route(r):
     u = r.request.url
-    if '/public/static/' in u: f = PRE / 'public/static' / u.split('/public/static/')[1]
+    if '@fontsource/nanum-pen-script' in u: f = Path('/tmp/fonts/node_modules/@fontsource/nanum-pen-script') / u.split('nanum-pen-script@5.3.0/')[1]
+    elif '/public/static/' in u: f = PRE / 'public/static' / u.split('/public/static/')[1]
     else: f = PRE / 'web/variable' / u.split('/dist/web/variable/')[1].replace('.min.css', '.css')
     if not f.exists(): return await r.fulfill(status=404)
-    ct = {'.css': 'text/css', '.ttf': 'font/ttf'}.get(f.suffix, 'font/woff2')
+    ct = {'.css': 'text/css', '.ttf': 'font/ttf', '.woff': 'font/woff'}.get(f.suffix, 'font/woff2')
     await r.fulfill(status=200, content_type=ct, body=f.read_bytes(), headers={'Access-Control-Allow-Origin': '*'})
 async def run(pg, vec, out):
     await pg.evaluate(f"()=>{{ S.print.vec={str(vec).lower()}; }}")
