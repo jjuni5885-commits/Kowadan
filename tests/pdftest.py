@@ -10,7 +10,7 @@ async def main():
         pg.on('console', lambda m: errs.append(m.text) if m.type=='error' else None)
         js=open(Path(__file__).resolve().parent.parent/'node_modules/jspdf/dist/jspdf.umd.min.js').read()
         await pg.route('https://cdnjs.cloudflare.com/**', lambda r: r.fulfill(status=200, content_type='application/javascript', body=js))
-        await pg.goto((Path(__file__).resolve().parent.parent/'dist/index.html').as_uri()); await pg.wait_for_timeout(1500)
+        await pg.goto((Path(__file__).resolve().parent.parent/'docs/index.html').as_uri()); await pg.wait_for_timeout(1500)
         # 가디건 V넥으로 바꿔 시험
         await pg.evaluate("""()=>{ S.dl={save:async ({filename,data})=>{ window.__pdf=data; window.__fn=filename; return {status:'saved'} }}; }""")
         await pg.click('button[data-tab="print"]'); await pg.wait_for_timeout(300)

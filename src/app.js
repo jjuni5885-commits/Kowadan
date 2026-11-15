@@ -653,7 +653,7 @@ function viewPrint() {
     <div class="row wrap">
       ${[['cover', '표지와 재료'], ['schem', '도식화'], ['text', '서술형 도안'], ['motifs', '무늬 차트'], ['charts', '조각 차트'], ['ratio', '게이지 비율 칸']].map(([k, n]) => `<label class="chk"><input type="checkbox" data-pr="${k}" ${o[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
     </div>
-    <div class="row"><button class="btn pri big" id="mkpdf" ${C ? '' : 'disabled'}>PDF 만들기</button><span id="pdfst" class="desc"></span></div>
+    <div class="row wrap"><button class="btn pri big" id="mkpdf" ${C ? '' : 'disabled'}>PDF 저장</button>${IN_CLAUDE ? '' : `<button class="btn big" id="prpdf" ${C ? '' : 'disabled'}>PDF 열어서 인쇄</button>`}<span id="pdfst" class="desc"></span></div>
     ${S.dl === null ? '' : ''}
     <div id="pdfprev" class="pdfprev"></div>
   </section>
@@ -663,16 +663,26 @@ function viewPrint() {
     <div class="row wrap"><button class="btn" id="bk">JSON 백업 저장</button><label class="btn file">JSON 불러오기<input type="file" id="bkin" accept=".json,application/json"></label></div>
   </section>`;
 }
+const IN_CLAUDE = !!(window.claude && window.claude.use);
+function browserDownload(filename, data) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type: filename.endsWith('.json') ? 'application/json' : 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return true;
+}
 async function saveFile(filename, data) {
-  const dl = S.dl || (window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null);
-  if (!dl) { toast('이 화면에서는 파일 저장을 쓸 수 없습니다. Claude 앱이나 웹에서 열어 주세요.'); return false; }
+  if (!IN_CLAUDE) return browserDownload(filename, data);
+  const dl = S.dl || await window.claude.use('downloads').catch(() => null);
+  if (!dl) { toast('이 화면에서는 파일 저장을 쓸 수 없습니다.'); return false; }
   try { await dl.save({ filename, data }); return true; }
   catch (e) { if (e && e.code === 'declined') toast('저장을 취소했습니다.'); else toast('파일을 저장하지 못했습니다' + (e && e.code ? ` (${e.code})` : '')); return false; }
 }
 function bindPrint() {
   $('#pcell').onchange = e => { S.print.cell = +e.target.value; LS.set('print', S.print); };
   document.querySelectorAll('[data-pr]').forEach(el => el.onchange = () => { S.print[el.dataset.pr] = el.checked; LS.set('print', S.print); });
-  $('#mkpdf').onclick = makePDF;
+  $('#mkpdf').onclick = () => makePDF(false);
+  const pr = $('#prpdf'); if (pr) pr.onclick = () => makePDF(true);
   $('#bk').onclick = () => {
     const data = JSON.stringify({ app: 'kowadan', ver: 1, at: new Date().toISOString(), projects: S.projects, motifs: S.motifs, workers: S.workers, current: { id: S.id, P: S.P } }, null, 1);
     saveFile(`코와단_백업_${new Date().toISOString().slice(0, 10)}.json`, data);
@@ -691,9 +701,11 @@ function bindPrint() {
 
 /* ===================== PDF ===================== */
 const PG = { W: 840, H: 1188, M: 48 }; // 1단위 = 0.25mm
-async function makePDF() {
+async function makePDF(openIt) {
   const C = S.C; if (!C) return;
-  const st = $('#pdfst'); const btn = $('#mkpdf');
+  const st = $('#pdfst'); const btn = openIt ? $('#prpdf') : $('#mkpdf');
+  const win = openIt ? window.open('', '_blank') : null;
+  if (win) win.document.write('<p style="font-family:sans-serif">PDF를 만드는 중입니다...</p>');
   if (!window.jspdf) { st.textContent = 'PDF 도구를 불러오는 중입니다. 잠시 후 다시 눌러 주세요.'; return; }
   btn.disabled = true; st.textContent = '페이지를 그리는 중...';
   try {
@@ -713,11 +725,17 @@ async function makePDF() {
       if (i) doc.addPage();
       doc.addImage(cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297);
     }
-    st.textContent = 'PDF 저장 창을 엽니다...';
     const blob = doc.output('blob');
+    if (openIt) {
+      const url = URL.createObjectURL(blob);
+      if (win) win.location.href = url; else window.open(url, '_blank');
+      st.textContent = `PDF ${pages.length}쪽을 새 창에 열었습니다. 그 창에서 인쇄하세요.`;
+      btn.disabled = false; return;
+    }
+    st.textContent = 'PDF 저장 창을 엽니다...';
     const ok = await saveFile(`${(S.P.name || '도안').replace(/[\\/:*?"<>|]/g, '')}.pdf`, blob);
     st.textContent = ok ? `PDF ${pages.length}쪽을 저장했습니다.` : '';
-  } catch (e) { console.error(e); st.textContent = 'PDF를 만들지 못했습니다: ' + e.message; }
+  } catch (e) { console.error(e); st.textContent = 'PDF를 만들지 못했습니다: ' + e.message; if (win) win.close(); }
   btn.disabled = false;
 }
 function footer(D, n, N) {

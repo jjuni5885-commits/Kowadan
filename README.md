@@ -2,8 +2,9 @@
 
 신체치수, 부위별 여유분, 게이지를 넣으면 대바늘 차트 도안과 서술형 도안을 함께 만들고 A4 PDF로 출력하는 웹 앱입니다. 전문 도안 제작, 판매용.
 
-- 배포본: Claude 아티팩트 https://claude.ai/artifact/WpWcq5BhTccAhhhwowXpTG
-- 한 파일 HTML (`dist/index.html`), 외부 의존은 Google Fonts(Noto Sans KR)와 cdnjs의 jsPDF 2.5.1
+- 배포 주소: https://jjuni5885-commits.github.io/kowadan/ (GitHub Pages, main 브랜치 /docs)
+- 개인용 사본: Claude 아티팩트 https://claude.ai/artifact/WpWcq5BhTccAhhhwowXpTG
+- 한 파일 HTML (`docs/index.html`), 외부 의존은 Google Fonts(Noto Sans KR)와 cdnjs의 jsPDF 2.5.1
 
 ## 구조
 
@@ -13,7 +14,7 @@
 | `src/render.js` | 그리기: SVG/Canvas 공용 백엔드, 차트, 교차뜨기 기호, 도식화 |
 | `src/app.js` | 화면: 탭 UI, 저장소(아티팩트 db, 없으면 브라우저), 무늬 편집기, PDF 출력, JSON 백업 |
 | `src/template.html` | 스타일과 틀. 빌드 때 세 JS가 들어감 |
-| `build.py` | `dist/index.html` 생성 |
+| `build.py` | `docs/index.html` 생성 |
 | `tests/` | 엔진 시험(node), 화면 캡처와 PDF 시험(playwright + Chrome) |
 
 ## 빌드와 시험
